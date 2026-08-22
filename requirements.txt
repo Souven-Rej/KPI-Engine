@@ -1,0 +1,28 @@
+# Core data
+pandas>=2.2,<3
+numpy>=1.26,<2
+duckdb>=1.0,<2
+pyyaml>=6.0,<7
+
+# Statistics & ML
+statsmodels>=0.14,<1
+scikit-learn>=1.4,<2
+
+# Causal inference
+dowhy>=0.11,<1
+econml>=0.15,<1
+
+# Privacy
+presidio-analyzer>=2.2,<3
+presidio-anonymizer>=2.2,<3
+
+# LLM & Schemas
+openai>=1.30,<2
+anthropic>=0.25,<1
+pydantic>=2.7,<3
+
+# UI
+streamlit>=1.35,<2
+
+# Dev & Testing
+pytest>=8.2,<9

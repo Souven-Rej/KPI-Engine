@@ -1,0 +1,14 @@
+[project]
+name = "kpi-engine"
+version = "0.1.0"
+description = "KPI storytelling-to-action engine — Accenture Innovation Challenge 2026"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

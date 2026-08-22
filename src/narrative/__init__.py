@@ -1,0 +1,1 @@
+"""LLM narrative generation module."""

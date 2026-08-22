@@ -1,0 +1,101 @@
+# ============================================================
+# KPI Contract — KPI Engine
+# ============================================================
+# Canonical definitions for all KPIs. Every downstream module
+# (detection, causal, prescriptive, narrative) MUST read its
+# KPI definition from this file to ensure consistent calculation.
+#
+# The `source_path` field maps directly to the CSV file path
+# relative to the project root (e.g., data/raw/sales_daily.csv)
+# so the Phase 2 ingestion engine can resolve files automatically.
+# ============================================================
+
+kpis:
+  regional_net_revenue:
+    display_name: "Regional Net Revenue"
+    description: >
+      Net revenue by region after returns, aggregated at daily grain.
+      Computed as gross_revenue minus the dollar value of returned units.
+    formula: "SUM(gross_revenue) - SUM(returns * unit_price)"
+    source_table: "sales_daily"
+    source_path: "data/raw/sales_daily.csv"
+    grain: "daily"
+    dimensions:
+      - region
+      - product
+    date_column: "date"
+    filters: null
+    unit: "USD"
+    direction: "higher_is_better"
+
+    # Anomaly detection thresholds (fraction deviation from STL baseline)
+    thresholds:
+      warning: -0.10    # 10% drop from baseline → warning
+      critical: -0.20   # 20% drop from baseline → critical alert
+
+    # Z-score threshold: flag any date whose STL residual |Z| exceeds this
+    z_score_threshold: 2.0
+
+    # Baseline decomposition method for anomaly detection
+    baseline_method: "STL_seasonal"
+    stl_config:
+      period: 7          # Weekly seasonality
+      seasonal: 13       # Seasonal smoother window (odd, >= 3)
+      robust: true       # Resist outliers in decomposition
+
+    # Sparse-history policy
+    minimum_history_days: 30
+    sparse_history_action: "bounded_estimate"
+    sparse_history_confidence: 0.80  # Wider CI for sparse data
+
+    # Confidence threshold for causal claims
+    causal_confidence_threshold: 0.70
+    low_confidence_action: "investigation_required"
+
+# ============================================================
+# Supporting data source definitions for multi-grain reconciliation
+# ============================================================
+data_sources:
+  sales_daily:
+    path: "data/raw/sales_daily.csv"
+    grain: "daily"
+    date_column: "date"
+    date_format: "%Y-%m-%d"
+    key_columns: ["date", "region", "product"]
+
+  marketing_weekly:
+    path: "data/raw/marketing_weekly.csv"
+    grain: "weekly"
+    date_column: "week_start"
+    date_format: "%Y-%m-%d"
+    key_columns: ["week_start", "region", "channel"]
+    align_to: "sales_daily"  # Distribute weekly → daily for joins
+
+  inventory_hourly:
+    path: "data/raw/inventory_hourly.csv"
+    grain: "6_hourly"
+    date_column: "timestamp"
+    date_format: "%Y-%m-%d %H:%M:%S"
+    key_columns: ["timestamp", "region", "product"]
+    aggregate_to: "daily"  # Roll up to daily for KPI joins (MIN stock_on_hand)
+
+# ============================================================
+# Role-based access control for narrative depth
+# ============================================================
+roles:
+  vp_of_sales:
+    display_name: "VP of Sales"
+    narrative_depth: "executive_summary"
+    visible_dimensions: ["region"]
+    show_statistical_details: false
+    show_confidence_intervals: true
+    show_prescriptive_actions: true
+
+  regional_manager:
+    display_name: "Regional Manager"
+    narrative_depth: "detailed_analysis"
+    visible_dimensions: ["region", "product"]
+    show_statistical_details: true
+    show_confidence_intervals: true
+    show_prescriptive_actions: true
+    show_raw_data_links: true
