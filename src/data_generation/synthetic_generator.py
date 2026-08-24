@@ -59,7 +59,7 @@ END_DATE = pd.Timestamp("2025-12-31")
 # ============================================================
 # CONFIGURATION — Dimensions
 # ============================================================
-REGIONS: list[str] = ["Northeast", "Southeast", "Midwest", "West"]
+REGIONS: list[str] = ["Northeast", "Southeast", "Midwest", "West", "Southwest"]
 PRODUCTS: list[str] = ["Widget_A", "Widget_B", "Widget_C"]
 CHANNELS: list[str] = ["search", "social", "email"]
 
@@ -69,7 +69,12 @@ REGION_MULTIPLIERS: dict[str, float] = {
     "Southeast": 1.00,
     "Midwest": 0.80,
     "West": 1.10,
+    "Southwest": 0.90, # Launched late
 }
+
+# Sparse-history region configuration
+SPARSE_REGION: str = "Southwest"
+SPARSE_REGION_LAUNCH = pd.Timestamp("2025-11-01")
 
 # ============================================================
 # CONFIGURATION — Causal Shocks
@@ -270,6 +275,9 @@ def generate_marketing_weekly() -> pd.DataFrame:
         shock_multiplier = 1.0 - (MARKETING_SHOCK_MAGNITUDE * shock_frac)
 
         for region in REGIONS:
+            if region == SPARSE_REGION and week_start < SPARSE_REGION_LAUNCH:
+                continue
+                
             region_mult = REGION_MULTIPLIERS[region]
             seasonal = _monthly_seasonality(week_start)
 
@@ -407,6 +415,9 @@ def generate_sales_daily(marketing_df: pd.DataFrame) -> pd.DataFrame:
         seasonal = _monthly_seasonality(date)
 
         for region in REGIONS:
+            if region == SPARSE_REGION and date < SPARSE_REGION_LAUNCH:
+                continue
+
             region_mult = REGION_MULTIPLIERS[region]
 
             # Look up lagged marketing influence for this date+region
@@ -447,6 +458,10 @@ def generate_sales_daily(marketing_df: pd.DataFrame) -> pd.DataFrame:
                 if is_stockout:
                     # Stockout: only ~5% of normal sales (some stores have residual)
                     base_units = max(int(base_units * 0.05), 0)
+                    
+                # Force an anomaly in the sparse region to trigger the test scenario
+                if region == SPARSE_REGION and date >= pd.Timestamp("2025-12-10") and date <= pd.Timestamp("2025-12-20"):
+                    base_units = max(int(base_units * 0.40), 0)
 
                 units_sold = base_units
 
@@ -516,18 +531,25 @@ def generate_inventory_hourly(sales_df: pd.DataFrame) -> pd.DataFrame:
 
     for region in REGIONS:
         for product in PRODUCTS:
+            if region == SPARSE_REGION:
+                region_start = SPARSE_REGION_LAUNCH
+            else:
+                region_start = START_DATE
+
             # Determine the start date for this product
             if product == SPARSE_PRODUCT:
                 product_start = SPARSE_LAUNCH_DATE
             else:
                 product_start = START_DATE
+                
+            actual_start = max(region_start, product_start)
 
             stock = INITIAL_STOCK[product]
             reorder_pending = False
             reorder_arrives_on: pd.Timestamp | None = None
 
             for date in all_dates:
-                if date < product_start:
+                if date < actual_start:
                     continue
 
                 # Check if reorder shipment arrives today

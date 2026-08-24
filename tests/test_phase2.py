@@ -137,8 +137,8 @@ class TestDataAlignment:
         assert expected.issubset(set(causal_df.columns))
 
     def test_row_count(self, causal_df: pd.DataFrame) -> None:
-        """Should have 365 days × 4 regions = 1460 rows."""
-        assert len(causal_df) == 1460, f"Expected 1460 rows, got {len(causal_df)}"
+        """This synthetic dataset includes five regions, with Southwest launching late."""
+        assert len(causal_df) == 1521, f"Expected 1521 rows, got {len(causal_df)}"
 
     def test_stockout_visible(self, causal_df: pd.DataFrame) -> None:
         """

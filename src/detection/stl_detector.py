@@ -227,6 +227,7 @@ def detect_anomalies(
 
     anomaly_events: list[dict] = []
     regions = sorted(kpi_df["region"].unique())
+    enriched_regions: list[pd.DataFrame] = []
 
     for region in regions:
         region_df = (
@@ -243,6 +244,10 @@ def detect_anomalies(
                 len(region_df),
                 min_history,
             )
+            # Just append the raw df with NaNs for STL components
+            for col in ["baseline", "trend", "seasonal", "residual", "z_score", "pct_deviation"]:
+                region_df[col] = np.nan
+            enriched_regions.append(region_df)
             continue
 
         # ── STL decomposition ─────────────────────────────────────
@@ -269,6 +274,9 @@ def detect_anomalies(
             logger.warning(
                 "Region '%s': residual std is zero/NaN. Skipping.", region
             )
+            for col in ["baseline", "trend", "seasonal", "residual", "z_score", "pct_deviation"]:
+                region_df[col] = np.nan
+            enriched_regions.append(region_df)
             continue
 
         z_scores = (residual - resid_mean) / resid_std
@@ -278,6 +286,16 @@ def detect_anomalies(
         # Guard against division by zero in baseline
         safe_baseline = baseline.replace(0, np.nan)
         pct_deviation = (ts - baseline) / safe_baseline
+        
+        # Attach back to the region dataframe
+        region_df["baseline"] = baseline.values
+        region_df["trend"] = trend.values
+        region_df["seasonal"] = seasonal_comp.values
+        region_df["residual"] = residual.values
+        region_df["z_score"] = z_scores.values
+        region_df["pct_deviation"] = pct_deviation.values
+        
+        enriched_regions.append(region_df)
 
         # ── Flag anomalies ────────────────────────────────────────
         anomaly_mask = z_scores.abs() > z_threshold
@@ -292,8 +310,6 @@ def detect_anomalies(
             elif pct_dev <= thresholds["warning"]:
                 severity = "warning"
             else:
-                # Z-score exceeded threshold but fraction threshold not met
-                # (could be a positive spike or a mild drop)
                 severity = "info"
 
             anomaly_events.append(
@@ -311,6 +327,8 @@ def detect_anomalies(
                 }
             )
 
+    enriched_kpi_df = pd.concat(enriched_regions, ignore_index=True)
+
     # Build result DataFrame
     result_columns = [
         "date", "region", "net_revenue", "baseline", "trend", "seasonal",
@@ -318,12 +336,12 @@ def detect_anomalies(
     ]
 
     if not anomaly_events:
-        return pd.DataFrame(columns=result_columns)
+        return pd.DataFrame(columns=result_columns), enriched_kpi_df
 
     anomaly_df = pd.DataFrame(anomaly_events)
     anomaly_df = anomaly_df.sort_values(["date", "region"]).reset_index(drop=True)
 
-    return anomaly_df
+    return anomaly_df, enriched_kpi_df
 
 
 # ============================================================
@@ -376,7 +394,7 @@ def run_detection(
     logger.info("✓ Computed daily KPI: %s region-days", f"{len(kpi_df):,}")
 
     # 3. Detect anomalies
-    anomaly_df = detect_anomalies(kpi_df, contract)
+    anomaly_df, kpi_df = detect_anomalies(kpi_df, contract)
 
     logger.info("✓ Detection complete: %d anomaly events flagged", len(anomaly_df))
 

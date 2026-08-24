@@ -21,10 +21,10 @@ Causal DAG (hand-specified, per project design):
                  stock_on_hand ───────┘
 
 Attribution method:
-    Shapley-value-based noise attribution.  For each anomaly sample the
-    residual noise at every node is computed, then a marginal-contribution
-    sweep (all 2^|parents| subsets for the target) quantifies how much
-    each upstream noise term contributed to the target's anomaly score.
+    Exact Shapley-value decomposition over root-cause coalitions. For each
+    anomaly sample, every root cause is restored to its date-appropriate
+    seasonal baseline in turn and in combinations, and the marginal uplift of
+    each root is aggregated with the standard Shapley weights.
 
 Usage:
     python -m src.causal.dowhy_gcm
@@ -278,24 +278,27 @@ def align_datasets(
 # CAUSAL DAG DEFINITION
 # ============================================================
 
-def build_causal_dag() -> nx.DiGraph:
+def build_causal_dag(contract: dict | None = None) -> nx.DiGraph:
     """
-    Build the hand-specified causal DAG.
-
-    Edges encode the true causal structure from the data generator:
-        ad_spend ──► web_traffic ──► net_revenue
-                                         ▲
-                     stock_on_hand ───────┘
-
-    Returns:
-        networkx DiGraph with edges encoding causal direction.
+    Build the causal DAG dynamically from the kpi_contract.yaml.
     """
+    if contract is None:
+        contract = load_contract(PROJECT_ROOT / "config" / "kpi_contract.yaml")
+        
     dag = nx.DiGraph()
-    dag.add_edges_from([
-        (NODE_AD_SPEND, NODE_WEB_TRAFFIC),
-        (NODE_WEB_TRAFFIC, NODE_NET_REVENUE),
-        (NODE_STOCK, NODE_NET_REVENUE),
-    ])
+    
+    # Read edges from the contract
+    edges = contract.get("kpis", {}).get("causal_graph", {}).get("edges", [])
+    if not edges:
+        # Fallback if missing
+        dag.add_edges_from([
+            (NODE_AD_SPEND, NODE_WEB_TRAFFIC),
+            (NODE_WEB_TRAFFIC, NODE_NET_REVENUE),
+            (NODE_STOCK, NODE_NET_REVENUE),
+        ])
+    else:
+        for edge in edges:
+            dag.add_edge(edge["from"], edge["to"])
 
     # Validate it's actually a DAG
     if not nx.is_directed_acyclic_graph(dag):
@@ -445,6 +448,37 @@ def _get_ancestor_nodes(dag: nx.DiGraph, target: str) -> list[str]:
 # ANOMALY ATTRIBUTION (Counterfactual decomposition)
 # ============================================================
 
+import itertools
+import math
+
+def _compute_seasonal_baseline_value(
+    event_date: pd.Timestamp,
+    region: str,
+    root: str,
+    baseline_data: pd.DataFrame,
+) -> float:
+    """Return the expected value for a root cause at the event date using a local seasonal window."""
+    region_baseline = baseline_data[baseline_data["region"] == region].copy()
+    if region_baseline.empty:
+        return float(baseline_data[root].mean())
+
+    region_baseline["date"] = pd.to_datetime(region_baseline["date"])
+    local_window = region_baseline[
+        (region_baseline["date"] >= event_date - pd.Timedelta(days=45))
+        & (region_baseline["date"] <= event_date + pd.Timedelta(days=45))
+    ]
+
+    if not local_window.empty:
+        same_weekday = local_window[
+            local_window["date"].dt.dayofweek == event_date.dayofweek
+        ]
+        if not same_weekday.empty:
+            return float(same_weekday[root].median())
+        return float(local_window[root].median())
+
+    return float(region_baseline[root].median())
+
+
 def attribute_anomalies(
     model: InvertibleStructuralCausalModel,
     target_node: str,
@@ -453,88 +487,52 @@ def attribute_anomalies(
 ) -> dict[str, np.ndarray]:
     """
     Attribute anomalies at ``target_node`` to **root-cause** drivers
-    using counterfactual decomposition.
-
-    Method:
-        For each anomaly sample and each root-cause node, we ask:
-
-            "How much would net_revenue recover if this root were at
-             its baseline mean, with everything else held at its
-             observed anomalous value?"
-
-        This is computed by forward-propagating through the causal DAG:
-
-        1. Replace root_i with its baseline mean.
-        2. Re-predict all downstream nodes using the fitted mechanisms.
-        3. The counterfactual net_revenue minus the observed net_revenue
-           is root_i's contribution to the anomaly.
-
-        This correctly handles both scenarios:
-        - Marketing shock: replacing ad_spend with baseline mean recovers
-          web_traffic (via ad_spend → web_traffic), which recovers revenue.
-        - Stockout: replacing stock_on_hand with baseline mean directly
-          recovers revenue (via stock_on_hand → net_revenue).
-
-    Args:
-        model: A fitted InvertibleStructuralCausalModel.
-        target_node: The node whose anomaly we are attributing.
-        anomaly_samples: DataFrame of anomalous observations.
-        baseline_data: DataFrame of normal (non-anomalous) data used
-            to compute baseline means for counterfactuals.
-
-    Returns:
-        Dict mapping each **root-cause** node name to a numpy array of
-        contribution scores (one per anomaly sample).  Higher values
-        indicate the root recovers more of the anomaly when restored.
+    using an exact Shapley-value decomposition across root-cause coalitions.
     """
     if not model._is_fitted:
         raise RuntimeError("Model must be fitted before attribution.")
 
     dag = model.dag
-    n_samples = len(anomaly_samples)
     topo_order = list(nx.topological_sort(dag))
-
-    # Identify root nodes (no parents) — these are the root causes
     root_nodes = [n for n in dag.nodes() if dag.in_degree(n) == 0]
+    if target_node in root_nodes:
+        root_nodes.remove(target_node)
 
-    # Baseline means for each node
-    baseline_means: dict[str, float] = {
-        node: float(baseline_data[node].mean()) for node in dag.nodes()
-    }
+    if not root_nodes:
+        return {target_node: np.zeros(len(anomaly_samples))}
 
-    # Observed target values
+    n_samples = len(anomaly_samples)
+    contributions: dict[str, np.ndarray] = {root: np.zeros(n_samples) for root in root_nodes}
     observed_target = anomaly_samples[target_node].values.astype(np.float64)
 
-    contributions: dict[str, np.ndarray] = {}
+    sample_baselines: dict[str, np.ndarray] = {root: np.zeros(n_samples) for root in root_nodes}
+    for i, (_, row) in enumerate(anomaly_samples.iterrows()):
+        event_date = pd.to_datetime(row["date"])
+        region = row["region"]
+        for root in root_nodes:
+            sample_baselines[root][i] = _compute_seasonal_baseline_value(
+                event_date=event_date,
+                region=region,
+                root=root,
+                baseline_data=baseline_data,
+            )
 
-    for root in root_nodes:
-        if root == target_node:
-            continue
-
-        # Build a counterfactual: replace this root with its baseline mean,
-        # then forward-propagate through the DAG
+    def evaluate_coalition(S: tuple[str, ...]) -> np.ndarray:
         cf_values: dict[str, np.ndarray] = {}
-
         for node in topo_order:
             parents = list(dag.predecessors(node))
-
-            if node == root:
-                # Intervene: set this root to its baseline mean
-                cf_values[node] = np.full(n_samples, baseline_means[root])
-
+            if node in root_nodes:
+                if node in S:
+                    cf_values[node] = sample_baselines[node]
+                else:
+                    cf_values[node] = anomaly_samples[node].values.astype(np.float64)
             elif len(parents) == 0:
-                # Other roots: keep observed values
                 cf_values[node] = anomaly_samples[node].values.astype(np.float64)
-
             else:
-                # Non-root node: re-predict from (possibly counterfactual) parents
                 mechanism = model._mechanisms[node]
                 if isinstance(mechanism, AdditiveNoiseModel):
-                    # Use counterfactual parent values
                     X_cf = np.column_stack([cf_values[p] for p in parents])
-                    # Predict f(counterfactual_parents)
                     predicted = mechanism.predict(X_cf)
-                    # Add back the observed noise (residual)
                     X_obs = anomaly_samples[parents].values.astype(np.float64)
                     y_obs = anomaly_samples[node].values.astype(np.float64)
                     observed_noise = y_obs - mechanism.predict(X_obs)
@@ -542,11 +540,24 @@ def attribute_anomalies(
                 else:
                     cf_values[node] = anomaly_samples[node].values.astype(np.float64)
 
-        # Contribution = how much revenue recovers when this root is
-        # restored to baseline (positive = root was dragging revenue down)
-        cf_target = cf_values[target_node]
-        recovery = cf_target - observed_target
-        contributions[root] = recovery
+        return cf_values[target_node] - observed_target
+
+    v_cache: dict[tuple[str, ...], np.ndarray] = {}
+
+    def v(S_list: list[str]) -> np.ndarray:
+        S_tuple = tuple(sorted(S_list))
+        if S_tuple not in v_cache:
+            v_cache[S_tuple] = evaluate_coalition(S_tuple)
+        return v_cache[S_tuple]
+
+    n = len(root_nodes)
+    for root in root_nodes:
+        others = [x for x in root_nodes if x != root]
+        for k in range(n):
+            for S in itertools.combinations(others, k):
+                weight = math.factorial(k) * math.factorial(n - k - 1) / math.factorial(n)
+                marginal = v(list(S) + [root]) - v(list(S))
+                contributions[root] += weight * marginal
 
     return contributions
 
@@ -606,7 +617,9 @@ def run_causal_attribution(
         logger.info("Using pre-aligned causal DataFrame (%d rows)", len(df_causal))
 
     # 2. Build DAG
-    dag = build_causal_dag()
+    if "contract" not in locals():
+        contract = load_contract(project_root / "config" / "kpi_contract.yaml")
+    dag = build_causal_dag(contract)
     logger.info(
         "✓ Causal DAG: %s",
         " → ".join(
@@ -624,7 +637,7 @@ def run_causal_attribution(
 
     df_causal["_key"] = list(zip(df_causal["date"], df_causal["region"]))
     baseline_mask = ~df_causal["_key"].isin(anomaly_keys)
-    df_baseline = df_causal[baseline_mask][ALL_NODES].copy()
+    df_baseline = df_causal[baseline_mask].copy()
     df_causal.drop(columns=["_key"], inplace=True)
 
     logger.info(
@@ -635,7 +648,7 @@ def run_causal_attribution(
 
     # 4. Fit model on baseline
     model = InvertibleStructuralCausalModel(dag)
-    model.fit(df_baseline)
+    model.fit(df_baseline[ALL_NODES])
     logger.info("✓ Causal model fitted on baseline data")
 
     # 5. Load confidence threshold from contract
@@ -665,7 +678,7 @@ def run_causal_attribution(
             )
             continue
 
-        anomaly_sample = match[ALL_NODES].copy()
+        anomaly_sample = match.copy()
 
         # Run Shapley attribution
         attributions = attribute_anomalies(

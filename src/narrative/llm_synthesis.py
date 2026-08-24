@@ -187,9 +187,9 @@ def _mock_generate_narrative(
         )
     else:
         resp = SynthesisResponse(
-            narrative_summary=f"({persona.upper()}) Revenue dropped due to changes in {list(attribution_data.keys())[0] if attribution_data else 'key metrics'}.",
-            key_drivers=[f"{k}: {v}% contribution" for k, v in attribution_data.items()],
-            recommended_actions=["Restore marketing spend.", "Check inventory levels."],
+            narrative_summary=f"({persona.upper()}) Revenue dropped primarily due to a disruption in {attribution_data.get('primary_driver', 'key metrics')}.",
+            key_drivers=[f"{k}: {v}%" for k, v in attribution_data.items() if str(k).endswith("_contribution_pct")],
+            recommended_actions=["Restore primary driver to baseline.", "Monitor secondary indicators."],
             confidence_status="High"
         )
         

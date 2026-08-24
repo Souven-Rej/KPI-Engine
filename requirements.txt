@@ -23,6 +23,7 @@ pydantic>=2.7,<3
 
 # UI
 streamlit>=1.35,<2
+plotly>=5.20,<6
 
 # Dev & Testing
 pytest>=8.2,<9

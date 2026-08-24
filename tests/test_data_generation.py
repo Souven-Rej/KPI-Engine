@@ -21,6 +21,8 @@ from src.data_generation.synthetic_generator import (
     REGIONS,
     SPARSE_LAUNCH_DATE,
     SPARSE_PRODUCT,
+    SPARSE_REGION,
+    SPARSE_REGION_LAUNCH,
     START_DATE,
     STOCKOUT_END,
     STOCKOUT_PRODUCT,
@@ -97,10 +99,11 @@ class TestSalesDailySchema:
         df = generated_data["sales_daily"]
         n_days = (END_DATE - START_DATE).days + 1  # 365
         n_regions = len(REGIONS)
-        # Widget_A and Widget_B have 365 days each, Widget_C has 31 days
-        # Per region: 365 + 365 + 31 = 761
-        expected_per_region = n_days * 2 + 31
-        expected_total = expected_per_region * n_regions
+        # Four regions are active for the full year; Southwest starts on 2025-11-01.
+        full_year_rows_per_region = n_days * 2 + 31
+        sparse_days = (END_DATE - SPARSE_REGION_LAUNCH).days + 1
+        sparse_region_rows = sparse_days * 2 + 31
+        expected_total = (n_regions - 1) * full_year_rows_per_region + sparse_region_rows
         # Allow small tolerance
         assert abs(len(df) - expected_total) <= n_regions, (
             f"Expected ~{expected_total} rows, got {len(df)}"

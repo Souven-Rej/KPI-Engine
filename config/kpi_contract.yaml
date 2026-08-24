@@ -52,6 +52,55 @@ kpis:
     causal_confidence_threshold: 0.70
     low_confidence_action: "investigation_required"
 
+  causal_graph:
+    edges:
+      - from: "ad_spend"
+        to: "web_traffic"
+      - from: "web_traffic"
+        to: "net_revenue"
+      - from: "stock_on_hand"
+        to: "net_revenue"
+
+  web_traffic:
+    display_name: "Web Traffic"
+    description: "Daily unique visitors to the regional storefront."
+    formula: "SUM(unique_visitors)"
+    source_table: "sales_daily"
+    source_path: "data/raw/sales_daily.csv"
+    grain: "daily"
+    dimensions:
+      - region
+    date_column: "date"
+    filters: null
+    unit: "Visitors"
+    direction: "higher_is_better"
+    thresholds:
+      warning: -0.15
+      critical: -0.30
+    z_score_threshold: 2.0
+    baseline_method: "STL_seasonal"
+
+  inventory_health_index:
+    display_name: "Inventory Health Index"
+    description: "Average stock on hand across top-converting SKUs."
+    formula: "AVG(stock_on_hand)"
+    source_table: "inventory_hourly"
+    source_path: "data/raw/inventory_hourly.csv"
+    grain: "hourly"
+    dimensions:
+      - region
+      - product
+    date_column: "timestamp"
+    filters: null
+    unit: "Units"
+    direction: "higher_is_better"
+    thresholds:
+      warning: -0.20
+      critical: -0.50
+    z_score_threshold: 2.5
+    baseline_method: "STL_seasonal"
+
+
 # ============================================================
 # Supporting data source definitions for multi-grain reconciliation
 # ============================================================
