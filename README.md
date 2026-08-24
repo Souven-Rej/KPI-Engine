@@ -50,11 +50,11 @@ pip install -r requirements.txt
 ```
 
 ### 2. Environment Variables
-Create a `.env` file in the root directory and add your OpenAI API key.
+Create a `.env` file in the root directory and add your Google Gemini API key.
 ```env
-OPENAI_API_KEY=sk-your-key-here
+GEMINI_API_KEY=your-gemini-key-here
 ```
-*(Note: If no API key is provided, the engine will gracefully fall back to a local mock LLM responder to ensure the demo continues uninterrupted.)*
+*(The engine also supports OpenAI as a fallback: set `OPENAI_API_KEY` instead. If no API key is provided, it will gracefully fall back to a local mock LLM responder to ensure the demo continues uninterrupted.)*
 
 ### 3. Run the Streamlit Dashboard
 Launch the Interactive Decision Canvas to explore the pipeline:
