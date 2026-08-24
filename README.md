@@ -22,9 +22,9 @@ Generates 10,000+ rows of perfectly reproducible (`seed=42`) multi-grain synthet
 * **Detection (`stl_detector.py`)**: Ingests `kpi_contract.yaml`, dynamically computes KPIs, and utilizes `statsmodels.tsa.seasonal.STL` to flag anomaly events (`|Z| > 2.0`).
 * **Attribution (`dowhy_gcm.py`)**: Uses a Custom `InvertibleStructuralCausalModel` (backed by scikit-learn Gradient Boosting Regressors) to perform **Counterfactual Noise Decomposition**. It accurately traces anomalies backward through the causal DAG to root causes (`ad_spend` or `stock_on_hand`).
 
-### Phase 3: Prescriptive Analytics & Synthesis (`econml` & `openai`)
+### Phase 3: Prescriptive Analytics & Synthesis (`econml` & `google-genai`)
 * **Prescriptive CATE (`econml_cate.py`)**: Employs Double Machine Learning (`LinearDML`) to calculate the Conditional Average Treatment Effect. It translates the anomaly into a dollar-value "Expected Revenue Lift" if the root cause is resolved.
-* **LLM Synthesis (`llm_synthesis.py`)**: Translates the mathematical payload into natural language via OpenAI. Uses strict Pydantic models (`SynthesisResponse`) to guarantee structured JSON output tailored to specific personas (e.g., VP of Sales vs. Regional Manager).
+* **LLM Synthesis (`llm_synthesis.py`)**: Translates the mathematical payload into natural language via Google Gemini (`gemini-3.6-flash`). Uses Native Structured Outputs to guarantee a JSON payload tailored to specific personas (e.g., VP of Sales vs. Regional Manager).
 
 ### Phase 4: Interactive Decision Canvas (`streamlit`)
 A Streamlit dashboard built for rapid scenario injection, allowing judges to test the pipeline interactively without re-running heavy ML models. Features real-time API telemetry, traceability panels, and dynamic state switching.

@@ -27,6 +27,11 @@ try:
 except ImportError:
     OpenAI = None
 
+try:
+    from google import genai
+except ImportError:
+    genai = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -66,30 +71,16 @@ def generate_narrative(
     model: str = "gpt-4o",
 ) -> Tuple[SynthesisResponse, dict[str, Any]]:
     """
-    Generate a role-specific narrative using an LLM.
-
-    Args:
-        anomaly_data: Dict of anomaly details (date, region, severity, revenue drop).
-        attribution_data: Dict of causal attributions (e.g., ad_spend: 92%).
-        prescriptive_data: Dict of prescriptive CATE impacts (e.g., expected revenue lift).
-        persona: The target role (e.g., "vp_of_sales", "regional_manager").
-        data_ambiguity: Boolean flag from the prescriptive/causal engine indicating sparse history.
-        model: LLM model name to use.
-
-    Returns:
-        Tuple of (SynthesisResponse, telemetry_dict).
+    Generate a role-specific narrative using an LLM (Gemini or OpenAI).
     """
-    if OpenAI is None:
-        raise ImportError("openai package is not installed. Please install it to use LLM synthesis.")
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    openai_key = os.environ.get("OPENAI_API_KEY")
 
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        logger.warning("OPENAI_API_KEY not found in environment. Using mock LLM response.")
+    if not gemini_key and not openai_key:
+        logger.warning("No API keys found in environment. Using mock LLM response.")
         return _mock_generate_narrative(
             anomaly_data, attribution_data, prescriptive_data, persona, data_ambiguity
         )
-
-    client = OpenAI(api_key=api_key)
 
     # 1. Construct System Prompt
     system_prompt = (
@@ -123,49 +114,73 @@ def generate_narrative(
 
     # 2. Construct User Prompt
     user_prompt = (
-        f"Anomaly Detected:\n{json.dumps(anomaly_data, indent=2)}\n\n"
-        f"Causal Attribution:\n{json.dumps(attribution_data, indent=2)}\n\n"
-        f"Prescriptive Analytics:\n{json.dumps(prescriptive_data, indent=2)}\n\n"
+        f"Anomaly Detected:\n{json.dumps(anomaly_data, indent=2, default=str)}\n\n"
+        f"Causal Attribution:\n{json.dumps(attribution_data, indent=2, default=str)}\n\n"
+        f"Prescriptive Analytics:\n{json.dumps(prescriptive_data, indent=2, default=str)}\n\n"
         f"Data Ambiguity Flag: {data_ambiguity}\n\n"
         "Generate the structured synthesis based ONLY on the data provided."
     )
 
-    # 3. API Call with Telemetry
     start_time = time.time()
-    
-    try:
-        response = client.beta.chat.completions.parse(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            response_format=SynthesisResponse,
-            temperature=0.0,
-        )
-        end_time = time.time()
 
-        parsed_response = response.choices[0].message.parsed
-        
-        telemetry = {
-            "latency_seconds": round(end_time - start_time, 3),
-            "prompt_tokens": response.usage.prompt_tokens,
-            "completion_tokens": response.usage.completion_tokens,
-            "total_tokens": response.usage.total_tokens,
-            "model_used": model
-        }
+    # Route to Gemini if available
+    if gemini_key and genai:
+        try:
+            client = genai.Client(api_key=gemini_key)
+            response = client.models.generate_content(
+                model='gemini-3.6-flash',
+                contents=system_prompt + "\n\n" + user_prompt,
+                config=genai.types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=SynthesisResponse,
+                    temperature=0.0,
+                ),
+            )
+            end_time = time.time()
+            parsed_response = SynthesisResponse.model_validate_json(response.text)
+            
+            telemetry = {
+                "latency_seconds": round(end_time - start_time, 3),
+                "prompt_tokens": response.usage_metadata.prompt_token_count if response.usage_metadata else 0,
+                "completion_tokens": response.usage_metadata.candidates_token_count if response.usage_metadata else 0,
+                "total_tokens": response.usage_metadata.total_token_count if response.usage_metadata else 0,
+                "model_used": "gemini-3.6-flash"
+            }
+            logger.info("Gemini Synthesis Complete: Latency=%.2fs", telemetry["latency_seconds"])
+            return parsed_response, telemetry
+        except Exception as e:
+            logger.error("Gemini generation failed: %s", e)
+            raise
 
-        logger.info(
-            "LLM Synthesis Complete: Latency=%.2fs, Tokens=%d",
-            telemetry["latency_seconds"],
-            telemetry["total_tokens"],
-        )
-        
-        return parsed_response, telemetry
-
-    except Exception as e:
-        logger.error("LLM generation failed: %s", e)
-        raise
+    # Fallback to OpenAI
+    elif openai_key and OpenAI:
+        try:
+            client = OpenAI(api_key=openai_key)
+            response = client.beta.chat.completions.parse(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format=SynthesisResponse,
+                temperature=0.0,
+            )
+            end_time = time.time()
+            parsed_response = response.choices[0].message.parsed
+            telemetry = {
+                "latency_seconds": round(end_time - start_time, 3),
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens,
+                "model_used": model
+            }
+            logger.info("OpenAI Synthesis Complete: Latency=%.2fs", telemetry["latency_seconds"])
+            return parsed_response, telemetry
+        except Exception as e:
+            logger.error("OpenAI generation failed: %s", e)
+            raise
+    else:
+        raise RuntimeError("No compatible LLM client found.")
 
 
 def _mock_generate_narrative(

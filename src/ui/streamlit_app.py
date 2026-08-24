@@ -8,11 +8,15 @@ real-world complexities (telemetry, persona switching, data ambiguity).
 import os
 import time
 from pathlib import Path
+from dotenv import load_dotenv
 
 import pandas as pd
 import streamlit as st
 import plotly.express as px
 import yaml
+
+# Load environment variables from .env
+load_dotenv()
 
 from src.detection.stl_detector import run_detection
 from src.causal.dowhy_gcm import run_causal_attribution, align_datasets
@@ -132,6 +136,8 @@ def main():
                 st.error("Scenario event not found in detection results!")
                 return
             target_event = event_row.iloc[0].to_dict()
+            if "date" in target_event and hasattr(target_event["date"], "strftime"):
+                target_event["date"] = target_event["date"].strftime("%Y-%m-%d")
 
             # 2. Causal Attribution
             attribution_result = run_causal_for_event(anomaly_events, target_date, target_region)

@@ -24,28 +24,22 @@ logger = logging.getLogger(__name__)
 def estimate_revenue_lift(
     df_causal: pd.DataFrame,
     anomaly_event: dict[str, Any],
-    primary_driver: str = "ad_spend",
     min_history_days: int = 30,
-    **kwargs: Any,
+    primary_driver: str = "ad_spend"
 ) -> dict[str, Any]:
     """
-    Calculate the expected revenue lift if the primary lever is restored to baseline.
+    Calculate the expected revenue lift if the primary_driver lever is restored to baseline.
 
     Args:
         df_causal: The aligned multi-grain DataFrame.
         anomaly_event: The anomaly event dictionary containing date and region.
-        primary_driver: The root cause driver identified by causal attribution.
         min_history_days: Minimum days required to run the DML.
+        primary_driver: The causal driver to treat as the intervention (e.g. ad_spend or stock_on_hand).
 
     Returns:
         Dict with keys: 
             expected_lift, data_ambiguity, message, current_spend, baseline_spend, cate
     """
-    if "driver" in kwargs and primary_driver == "ad_spend":
-        primary_driver = str(kwargs["driver"])
-    if "treatment" in kwargs and primary_driver == "ad_spend":
-        primary_driver = str(kwargs["treatment"])
-
     region = anomaly_event.get("region")
     event_date = pd.to_datetime(anomaly_event.get("date"))
     
@@ -67,25 +61,21 @@ def estimate_revenue_lift(
             "cate": None
         }
 
-    # 2. Setup DML variables dynamically based on the actual primary driver.
-    # Treatment (T) = primary_driver, Outcome (Y) = net_revenue,
-    # Features (X) = all remaining causal root causes.
-    possible_roots = ["ad_spend", "stock_on_hand"]
-    if primary_driver not in possible_roots:
-        primary_driver = possible_roots[0]
-
-    other_roots = [r for r in possible_roots if r != primary_driver]
-
+    # 2. Setup DML variables
     Y = history_before_event["net_revenue"].values
+    
+    if primary_driver not in history_before_event.columns:
+        logger.warning(f"Driver {primary_driver} not found. Defaulting to ad_spend.")
+        primary_driver = "ad_spend"
+        
     T = history_before_event[primary_driver].values
-
-    if other_roots:
-        X = history_before_event[other_roots].values
-    else:
-        X = np.ones((len(history_before_event), 1))
+    
+    # Condition CATE on the other factor
+    feature_col = "stock_on_hand" if primary_driver == "ad_spend" else "ad_spend"
+    X = history_before_event[[feature_col]].values
     
     # 3. Fit LinearDML
-    logger.debug("Fitting LinearDML for region %s (T=%s)...", region, primary_driver)
+    logger.debug("Fitting LinearDML for region %s with treatment %s...", region, primary_driver)
     dml = LinearDML(
         model_y=LassoCV(cv=3, random_state=42),
         model_t=LassoCV(cv=3, random_state=42),
@@ -109,45 +99,32 @@ def estimate_revenue_lift(
     # 4. Compute Lift
     current_row = history_before_event[history_before_event["date"] == event_date]
     if current_row.empty:
-        current_spend = 0.0
-        if other_roots:
-            current_X = np.zeros(len(other_roots))
-        else:
-            current_X = np.array([1.0])
+        current_val = 0.0
+        current_feature = 0.0
     else:
-        current_spend = current_row[primary_driver].values[0]
-        if other_roots:
-            current_X = current_row[other_roots].values[0]
-        else:
-            current_X = np.array([1.0])
+        current_val = current_row[primary_driver].values[0]
+        current_feature = current_row[feature_col].values[0]
         
-    # Baseline is the local recent-history expectation, not a hardcoded early-window mean.
-    recent_window = history_before_event[
-        history_before_event["date"] >= event_date - pd.Timedelta(days=30)
-    ]
-    if recent_window.empty:
-        baseline_spend = history_before_event[primary_driver].mean()
-    else:
-        baseline_spend = recent_window[primary_driver].median()
+    # Baseline (we take the mean of the first half of history as 'normal' baseline)
+    baseline_val = history_before_event[primary_driver].head(len(history_before_event) // 2).mean()
     
     # CATE for the current state
-    X_pred = np.array([current_X])
+    X_pred = np.array([[current_feature]])
     cate_estimate = dml.effect(X_pred)[0]
     
-    expected_lift = cate_estimate * (baseline_spend - current_spend)
-    # We only care about positive lift (recovering revenue)
+    expected_lift = cate_estimate * (baseline_val - current_val)
     expected_lift = max(expected_lift, 0.0)
     
     logger.info(
-        "Region %s | Prescriptive CATE = %.2f, Lift = $%.2f (Restoring %s from $%.2f to $%.2f)",
-        region, cate_estimate, expected_lift, primary_driver, current_spend, baseline_spend
+        "Region %s | Prescriptive CATE = %.2f, Lift = $%.2f (Restoring %s from %.2f to %.2f)",
+        region, cate_estimate, expected_lift, primary_driver, current_val, baseline_val
     )
     
     return {
         "expected_lift": round(float(expected_lift), 2),
         "data_ambiguity": False,
         "message": "Successfully estimated revenue lift.",
-        "current_spend": round(float(current_spend), 2),
-        "baseline_spend": round(float(baseline_spend), 2),
+        "current_spend": round(float(current_val), 2),
+        "baseline_spend": round(float(baseline_val), 2),
         "cate": round(float(cate_estimate), 2)
     }
