@@ -25,7 +25,7 @@ import plotly.graph_objects as go
 import yaml
 
 # Load environment variables from .env
-load_dotenv()
+load_dotenv(override=True)
 
 from src.detection.stl_detector import run_detection
 from src.causal.dowhy_gcm import run_causal_attribution, align_datasets
@@ -333,6 +333,12 @@ def _load_roles_from_contract() -> dict[str, str]:
 
 @st.cache_data(show_spinner=False)
 def load_and_detect():
+    data_path = PROJECT_ROOT / "data" / "raw" / "sales_daily.csv"
+    if not data_path.exists():
+        from src.data_generation.synthetic_generator import generate_all
+        # Just run generation directly if missing (e.g. fresh clone on Streamlit Cloud)
+        generate_all()
+
     anomaly_events, daily_kpi = run_detection()
     df_causal = align_datasets()
     return anomaly_events, daily_kpi, df_causal
@@ -894,7 +900,7 @@ def main():
     st.markdown(f"""
     <div style="text-align: center; padding: 0.8rem; color: #4a4e5a; font-size: 0.7rem;">
         Governance: KPI lineage loaded for {lineage.get('display_name')} · source={lineage.get('source_table')} · 
-        Deterministic Pipeline v2.0 · Accenture Innovation Challenge 2026
+        KPI Engine v1.0 · Accenture Innovation Challenge 2026
     </div>
     """, unsafe_allow_html=True)
 
