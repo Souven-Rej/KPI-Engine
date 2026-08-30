@@ -7,9 +7,15 @@ Proves that the engine handles real-world complexities
 """
 
 import os
+import sys
 import time
 from pathlib import Path
 from dotenv import load_dotenv
+
+# Add project root to sys.path to fix Streamlit Cloud nested imports
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import pandas as pd
 import numpy as np
