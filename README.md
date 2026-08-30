@@ -69,4 +69,4 @@ python main.py
 ```
 
 ---
-*Built for the Accenture Innovation Challenge 2026. Codebase is 100% production-ready.*
+*Built for the Accenture Innovation Challenge 2026.*
