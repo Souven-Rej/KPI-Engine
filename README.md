@@ -1,10 +1,10 @@
-# Reason v2: KPI Storytelling-to-Action Engine
+# ⚡ KPI Engine: Storytelling-to-Action Pipeline
 **Accenture Innovation Challenge 2026 — BusinessIntelligence.ai Track**
 
-Reason v2 is an autonomous, deterministic-first analytics prototype that bridges the gap between raw data and executive action. It detects KPI movements, reconciles multi-grain data, identifies causal drivers, calculates expected financial lift, and generates role-specific narratives.
+KPI Engine is an autonomous, deterministic-first analytics prototype that bridges the gap between raw data and executive action. It detects KPI movements, reconciles multi-grain data, identifies causal drivers, calculates expected financial lift, and generates role-specific narratives.
 
 ### The Core Philosophy: *"Math does the finding. AI does the explaining."*
-Standard GenAI wrappers often hallucinate causal relationships. Reason v2 flips the paradigm. We enforce a rigid, mathematically deterministic pipeline (STL Decomposition + Structural Causal Models + Double Machine Learning) to find the truth, reserving LLMs exclusively for translating the statistically verified JSON payload into plain English. 
+Standard GenAI wrappers often hallucinate causal relationships. KPI Engine flips the paradigm. We enforce a rigid, mathematically deterministic pipeline (STL Decomposition + Structural Causal Models + Double Machine Learning) to find the truth, reserving LLMs exclusively for translating the statistically verified JSON payload into plain English. 
 
 If the data is too sparse to prove causality, the engine's **Abstention Protocol** activates, explicitly refusing to guess and returning an "Investigation Required" state.
 
@@ -33,9 +33,9 @@ A Streamlit dashboard built for rapid scenario injection, allowing judges to tes
 
 ## 🚀 Key Differentiators for Judges
 
-1. **The "Anti-AI" Abstention Protocol**: Standard LLMs guess when data is missing. Reason v2 implements a strict sparse-history rule. If a region has < 30 days of data, the DML engine returns `data_ambiguity = True`. The LLM intercepts this flag and is forced via system prompt to output "Investigation Required," proving the system's safety in enterprise environments.
+1. **The "Anti-AI" Abstention Protocol**: Standard LLMs guess when data is missing. KPI Engine implements a strict sparse-history rule. If a region has < 30 days of data, the DML engine returns `data_ambiguity = True`. The LLM intercepts this flag and is forced via system prompt to output "Investigation Required," proving the system's safety in enterprise environments.
 2. **Custom Python 3.14 SCM**: To maintain modern runtime compliance while utilizing cutting-edge causal math, we reverse-engineered the `dowhy.gcm` API to build a custom, compatible `InvertibleStructuralCausalModel` from scratch using `sklearn` and `networkx`. 
-3. **72 Hours to 3 Seconds**: Reason v2 automates what normally takes a data science team days of SQL slicing and Jupyter Notebook analysis, delivering a traceable, actionable CATE estimate instantly.
+3. **72 Hours to 3 Seconds**: KPI Engine automates what normally takes a data science team days of SQL slicing and Jupyter Notebook analysis, delivering a traceable, actionable CATE estimate instantly.
 
 ---
 
