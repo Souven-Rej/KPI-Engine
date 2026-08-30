@@ -707,11 +707,8 @@ def run_causal_attribution(
         primary_driver = max(pct_contributions, key=pct_contributions.get)
         confidence = pct_contributions[primary_driver] / 100.0
 
-        # If confidence is below threshold, flag as investigation required
-        if confidence < confidence_threshold:
-            primary_driver_label = f"{primary_driver} ({low_conf_action})"
-        else:
-            primary_driver_label = primary_driver
+        # If confidence is below threshold, flag as low confidence
+        low_confidence = confidence < confidence_threshold
 
         results.append({
             "date": event_date,
@@ -721,8 +718,9 @@ def run_causal_attribution(
             "ad_spend_contribution_pct": pct_contributions.get(NODE_AD_SPEND, 0.0),
             "stock_on_hand_contribution_pct": pct_contributions.get(NODE_STOCK, 0.0),
             "web_traffic_contribution_pct": pct_contributions.get(NODE_WEB_TRAFFIC, 0.0),
-            "primary_driver": primary_driver_label,
+            "primary_driver": primary_driver,
             "confidence": round(confidence, 3),
+            "low_confidence": low_confidence,
         })
 
     result_df = pd.DataFrame(results)
@@ -735,7 +733,7 @@ def run_causal_attribution(
     if not result_df.empty:
         for driver in [NODE_AD_SPEND, NODE_STOCK, NODE_WEB_TRAFFIC]:
             driver_col = f"{driver}_contribution_pct"
-            is_primary = result_df["primary_driver"].str.startswith(driver)
+            is_primary = result_df["primary_driver"] == driver
             count = int(is_primary.sum())
             if count > 0:
                 avg_pct = result_df.loc[is_primary, driver_col].mean()
