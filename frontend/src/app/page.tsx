@@ -318,7 +318,7 @@ export default function Dashboard() {
                     <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-fuchsia-500 to-purple-600" />
                     <div className="flex items-center gap-4 mb-6">
                       <h2 className="text-[11px] font-black tracking-[0.2em] text-slate-400 uppercase">Interactive What-If Simulator</h2>
-                      <div className="bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[10px] font-bold">BETA</div>
+
                     </div>
                     
                     <div className="flex flex-col gap-6">
