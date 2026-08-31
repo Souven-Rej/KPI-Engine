@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Activity, AlertTriangle, BrainCircuit, BarChart3, ChevronDown, CheckCircle2, LayoutDashboard, Settings, Bell, Search, Menu, HelpCircle } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip as PieTooltip, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as LineTooltip, Legend, Line } from "recharts";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const COLORS = ["#8b5cf6", "#10b981", "#3b82f6"]; // Modern SaaS colors (Violet, Emerald, Blue)
 
 export default function Dashboard() {
@@ -15,7 +16,7 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/scenarios")
+    fetch(`${API_BASE}/api/scenarios`)
       .then((res) => res.json())
       .then((data) => {
         setScenarios(data.scenarios);
@@ -35,8 +36,8 @@ export default function Dashboard() {
       const scenario = scenarios.find((s) => s.id === selectedScenario);
       
       const [histRes, analRes] = await Promise.all([
-        fetch(`http://localhost:8000/api/history?region=${scenario.region}`),
-        fetch("http://localhost:8000/api/analyze", {
+        fetch(`${API_BASE}/api/history?region=${scenario.region}`),
+        fetch(`${API_BASE}/api/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -332,37 +333,43 @@ export default function Dashboard() {
                           step="50"
                           defaultValue={results.prescriptive.baseline_spend || 1500}
                           className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-500"
-                          onChange={async (e) => {
+                          onChange={(e) => {
                             const newVal = parseInt(e.target.value);
                             const sliderEl = document.getElementById('sim-slider-val');
                             if (sliderEl) sliderEl.innerText = '$' + newVal.toLocaleString();
-                            const el = document.getElementById('sim-lift');
-                            if (el) el.innerText = '...';
-                            const facEl = document.getElementById('sim-factual');
-                            const cfEl = document.getElementById('sim-cf');
                             
-                            try {
-                              const res = await fetch('http://localhost:8000/api/simulate', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  date: results.event.date,
-                                  region: results.event.region,
-                                  driver: results.attribution.primary_driver,
-                                  new_value: newVal
-                                })
-                              });
-                              if (res.ok) {
-                                const data = await res.json();
-                                const val = data.lift;
-                                const prefix = val >= 0 ? '+$' : '-$';
-                                if (el) el.innerText = prefix + Math.abs(val).toLocaleString(undefined, {maximumFractionDigits:0});
-                                if (facEl) facEl.innerText = '$' + data.factual_revenue.toLocaleString(undefined, {maximumFractionDigits:0});
-                                if (cfEl) cfEl.innerText = '$' + data.simulated_revenue.toLocaleString(undefined, {maximumFractionDigits:0});
+                            // Debounce: clear any pending API call, wait 300ms after user stops dragging
+                            if ((window as any).__simTimer) clearTimeout((window as any).__simTimer);
+                            (window as any).__simTimer = setTimeout(async () => {
+                              const el = document.getElementById('sim-lift');
+                              if (el) el.innerText = '...';
+                              const facEl = document.getElementById('sim-factual');
+                              const cfEl = document.getElementById('sim-cf');
+                              
+                              try {
+                                const res = await fetch(`${API_BASE}/api/simulate`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    date: results.event.date,
+                                    region: results.event.region,
+                                    driver: results.attribution.primary_driver,
+                                    new_value: newVal
+                                  })
+                                });
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  const clampedSimulated = Math.max(0, data.simulated_revenue);
+                                  const val = clampedSimulated - data.factual_revenue;
+                                  const prefix = val >= 0 ? '+$' : '-$';
+                                  if (el) el.innerText = prefix + Math.abs(val).toLocaleString(undefined, {maximumFractionDigits:0});
+                                  if (facEl) facEl.innerText = '$' + data.factual_revenue.toLocaleString(undefined, {maximumFractionDigits:0});
+                                  if (cfEl) cfEl.innerText = '$' + clampedSimulated.toLocaleString(undefined, {maximumFractionDigits:0});
+                                }
+                              } catch (e) {
+                                // error
                               }
-                            } catch (e) {
-                              // error
-                            }
+                            }, 300);
                           }}
                         />
                         <div className="flex justify-between text-[10px] text-slate-500 mt-2 font-mono">
