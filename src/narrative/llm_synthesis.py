@@ -220,11 +220,11 @@ def _mock_generate_narrative(
         )
         
     telemetry = {
-        "latency_seconds": 4.812,
-        "prompt_tokens": 842,
-        "completion_tokens": 124,
-        "total_tokens": 966,
-        "model_used": "gemini-3.6-flash"
+        "latency_seconds": 0.05,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "model_used": "Local Mock (API Offline)"
     }
     
     return resp, telemetry
