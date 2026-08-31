@@ -141,10 +141,6 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex items-center gap-4 text-slate-400">
-          <div className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-semibold tracking-wide flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            LIVE DEMO
-          </div>
         </div>
       </header>
 
