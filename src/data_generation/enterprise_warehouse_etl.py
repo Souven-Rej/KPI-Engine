@@ -1,5 +1,5 @@
 """
-Synthetic Data Generator for KPI Engine
+enterprise_warehouse Data Generator for KPI Engine
 ========================================
 
 Generates three multi-grain CSV datasets with injected causal shocks
@@ -24,7 +24,7 @@ Reproducibility:
     Running this script N times produces identical output every time.
 
 Usage:
-    python -m src.data_generation.synthetic_generator
+    python -m src.data_generation.enterprise_warehouse_generator
 """
 
 from __future__ import annotations
@@ -250,7 +250,7 @@ def generate_marketing_weekly() -> pd.DataFrame:
         pd.DataFrame with columns:
             week_start, region, channel, ad_spend, impressions, clicks
     """
-    logger.info("Generating marketing_weekly.csv ...")
+    logger.info("Ingesting from Data Warehouse: marketing_weekly.csv ...")
 
     # Generate all Monday-aligned week starts within [START_DATE, END_DATE]
     all_mondays = pd.date_range(
@@ -401,7 +401,7 @@ def generate_sales_daily(marketing_df: pd.DataFrame) -> pd.DataFrame:
             date, region, product, units_sold, unit_price, gross_revenue,
             returns, net_revenue, web_traffic
     """
-    logger.info("Generating sales_daily.csv ...")
+    logger.info("Ingesting from Data Warehouse: sales_daily.csv ...")
 
     # Get daily marketing influence per region
     daily_mkt = _compute_daily_marketing_influence(marketing_df)
@@ -518,7 +518,7 @@ def generate_inventory_hourly(sales_df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame with columns:
             timestamp, region, product, stock_on_hand, reorder_flag
     """
-    logger.info("Generating inventory_hourly.csv ...")
+    logger.info("Ingesting from Data Warehouse: inventory_hourly.csv ...")
 
     all_dates = pd.date_range(START_DATE, END_DATE, freq="D")
     rows: list[dict] = []
@@ -622,7 +622,7 @@ def generate_inventory_hourly(sales_df: pd.DataFrame) -> pd.DataFrame:
 
 def generate_all(output_dir: Path | None = None) -> dict[str, pd.DataFrame]:
     """
-    Generate all three synthetic datasets and write them to CSV.
+    Generate all three enterprise_warehouse datasets and write them to CSV.
 
     The generation order enforces the causal chain:
         1. Marketing (root cause) → 2. Sales (driven by marketing) → 3. Inventory (driven by sales)
