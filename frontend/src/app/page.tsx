@@ -202,36 +202,102 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-2">Anomaly Scenario</label>
-                <div className="relative group">
-                  <select 
-                    value={selectedScenario} 
-                    onChange={(e) => setSelectedScenario(e.target.value)}
-                    className="w-full bg-[#0f172a] border border-[#1e293b] group-hover:border-violet-500/50 rounded-xl p-3.5 text-sm appearance-none focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all shadow-sm"
-                  >
-                    {scenarios.map((s) => (
-                      <option key={s.id} value={s.id}>{s.label}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-4 text-slate-500 pointer-events-none transition-transform group-hover:text-violet-400" size={16} />
-                </div>
+              <div className="flex bg-[#0f172a] rounded-xl p-1 border border-[#1e293b]">
+                <button
+                  className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors ${!customMode ? 'bg-violet-600 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                  onClick={() => { setCustomMode(false); setResults(null); }}
+                >
+                  Historical
+                </button>
+                <button
+                  className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors ${customMode ? 'bg-emerald-600 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                  onClick={() => { setCustomMode(true); setResults(null); }}
+                >
+                  Custom Data
+                </button>
               </div>
 
-              <button 
-                onClick={handleAnalyze} 
-                disabled={loading || scenarios.length === 0}
-                className="w-full mt-2 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 font-semibold py-3.5 rounded-xl flex justify-center items-center gap-2 transition-all shadow-lg active:scale-[0.98]"
-              >
-                {loading ? (
-                  <span className="animate-pulse flex items-center gap-2"><div className="w-4 h-4 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" /> Processing...</span>
-                ) : (
-                  <>
-                    <BrainCircuit size={18} className="text-violet-600" />
-                    Execute Causal Engine
-                  </>
-                )}
-              </button>
+              {!customMode ? (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-2">Anomaly Scenario</label>
+                    <div className="relative group">
+                      <select 
+                        value={selectedScenario} 
+                        onChange={(e) => setSelectedScenario(e.target.value)}
+                        className="w-full bg-[#0f172a] border border-[#1e293b] group-hover:border-violet-500/50 rounded-xl p-3.5 text-sm appearance-none focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all shadow-sm"
+                      >
+                        {scenarios.map((s) => (
+                          <option key={s.id} value={s.id}>{s.label}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-4 top-4 text-slate-500 pointer-events-none transition-transform group-hover:text-violet-400" size={16} />
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={handleAnalyze} 
+                    disabled={loading || scenarios.length === 0}
+                    className="w-full mt-2 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 font-semibold py-3.5 rounded-xl flex justify-center items-center gap-2 transition-all shadow-lg active:scale-[0.98]"
+                  >
+                    {loading ? (
+                      <span className="animate-pulse flex items-center gap-2"><div className="w-4 h-4 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" /> Processing...</span>
+                    ) : (
+                      <>
+                        <BrainCircuit size={18} className="text-violet-600" />
+                        Execute Causal Engine
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <div className="space-y-4 border-t border-slate-800 pt-4 mt-2">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Region</label>
+                    <select 
+                      className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm appearance-none focus:outline-none focus:border-emerald-500"
+                      value={customData.region}
+                      onChange={(e) => setCustomData({...customData, region: e.target.value})}
+                    >
+                      <option>West</option><option>East</option><option>South</option><option>North</option><option>Central</option>
+                      <option>Southeast</option><option>Southwest</option><option>Northeast</option><option>Midwest</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Net Revenue ($)</label>
+                    <input type="number" className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500" value={customData.net_revenue} onChange={(e) => setCustomData({...customData, net_revenue: parseFloat(e.target.value) || 0})} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1">Ad Spend</label>
+                      <input type="number" className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500" value={customData.ad_spend} onChange={(e) => setCustomData({...customData, ad_spend: parseFloat(e.target.value) || 0})} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1">Traffic</label>
+                      <input type="number" className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500" value={customData.web_traffic} onChange={(e) => setCustomData({...customData, web_traffic: parseFloat(e.target.value) || 0})} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Stock On Hand</label>
+                    <input type="number" className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500" value={customData.stock_on_hand} onChange={(e) => setCustomData({...customData, stock_on_hand: parseFloat(e.target.value) || 0})} />
+                  </div>
+                  
+                  <button 
+                    onClick={handleAnalyzeCustom} 
+                    disabled={loading}
+                    className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 font-semibold py-3.5 rounded-xl flex justify-center items-center gap-2 transition-all shadow-lg active:scale-[0.98]"
+                  >
+                    {loading ? (
+                      <span className="animate-pulse flex items-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</span>
+                    ) : (
+                      <>
+                        <BrainCircuit size={18} />
+                        Run Custom Data
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           
