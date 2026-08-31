@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 # Load env before other imports
 load_dotenv(override=True)
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
 from src.detection.stl_detector import run_detection
 from src.causal.dowhy_gcm import run_causal_attribution, align_datasets
 from src.prescriptive.econml_cate import estimate_revenue_lift
@@ -135,3 +137,20 @@ def analyze_anomaly(req: AnalyzeRequest):
         "narrative": narrative,
         "telemetry": telemetry
     }
+
+
+class SimulateRequest(BaseModel):
+    date: str
+    region: str
+    driver: str
+    new_value: float
+
+@app.post("/api/simulate")
+async def simulate_scenario(req: SimulateRequest):
+    from src.causal.simulator import run_simulation
+    try:
+        res = run_simulation(PROJECT_ROOT, req.date, req.region, req.driver, req.new_value)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
