@@ -343,7 +343,7 @@ export default function Dashboard() {
                             if (el) el.innerText = 'Calculating...';
                             
                             try {
-                              const res = await fetch('/api/simulate', {
+                              const res = await fetch('http://localhost:8000/api/simulate', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
