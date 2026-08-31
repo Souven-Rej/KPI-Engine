@@ -316,6 +316,68 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                
+                  {/* WHAT-IF SIMULATOR */}
+                  <div className="mt-8 bg-[#0b0f19] rounded-3xl p-8 border border-[#1e293b] shadow-inner relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-fuchsia-500 to-purple-600" />
+                    <div className="flex items-center gap-4 mb-6">
+                      <h2 className="text-[11px] font-black tracking-[0.2em] text-slate-400 uppercase">Interactive What-If Simulator</h2>
+                      <div className="bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[10px] font-bold">BETA</div>
+                    </div>
+                    
+                    <div className="flex flex-col gap-6">
+                      <div>
+                        <div className="flex justify-between text-sm mb-3">
+                          <span className="text-slate-400">Intervene on <span className="font-bold text-white capitalize">{results.attribution.primary_driver?.replace(/_/g, ' ')}</span></span>
+                          <span className="text-fuchsia-400 font-bold bg-fuchsia-500/10 px-2 py-1 rounded">Live API</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="5000" 
+                          defaultValue={results.prescriptive.baseline_spend || 1500}
+                          className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-500"
+                          onChange={async (e) => {
+                            const newVal = parseInt(e.target.value);
+                            const el = document.getElementById('sim-lift');
+                            if (el) el.innerText = 'Calculating...';
+                            
+                            try {
+                              const res = await fetch('/api/simulate', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  date: results.event.date,
+                                  region: results.event.region,
+                                  driver: results.attribution.primary_driver,
+                                  new_value: newVal
+                                })
+                              });
+                              if (res.ok) {
+                                const data = await res.json();
+                                if (el) el.innerText = '+$' + Math.max(0, data.lift).toLocaleString(undefined, {maximumFractionDigits:0});
+                              }
+                            } catch (e) {
+                              // error
+                            }
+                          }}
+                        />
+                        <div className="flex justify-between text-[10px] text-slate-500 mt-2 font-mono">
+                          <span>$0</span>
+                          <span>$5,000</span>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-[#0f172a] rounded-xl p-4 border border-slate-800 flex items-center justify-between">
+                        <div className="text-xs text-slate-400">Projected Revenue Lift</div>
+                        <div id="sim-lift" className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-purple-400">
+                          +${(results.prescriptive.expected_lift || 0).toLocaleString(undefined, {maximumFractionDigits:0})}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+
                 {/* AI Synthesis */}
                 <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
