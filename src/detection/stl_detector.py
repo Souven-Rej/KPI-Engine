@@ -251,8 +251,9 @@ def detect_anomalies(
             continue
 
         # ── STL decomposition ─────────────────────────────────────
+        # Kaggle datasets often have missing days, resample to guarantee daily frequency for STL
         ts = region_df.set_index(date_col)["net_revenue"].copy()
-        ts.index.freq = "D"  # explicit daily freq for STL
+        ts = ts.asfreq("D").ffill().fillna(0)
 
         stl = STL(
             ts,
