@@ -96,7 +96,7 @@ export default function Dashboard() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h3 className="text-sm font-bold text-slate-200 uppercase tracking-widest">Revenue Baseline vs Actual</h3>
-            <p className="text-xs text-slate-500 mt-1">STL Decomposition Anomaly Tracking</p>
+
           </div>
           <div className="bg-[#1e293b] px-3 py-1 rounded-full text-xs text-slate-300 font-medium">12 Month History</div>
         </div>
@@ -262,7 +262,7 @@ export default function Dashboard() {
                     <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div>
                       <h3 className="text-sm font-bold text-slate-200 uppercase tracking-widest mb-1">Root Cause Tracing</h3>
-                      <p className="text-xs text-slate-500">Shapley Counterfactuals</p>
+
                     </div>
                     
                     <div className="flex-1 flex flex-col justify-center">
@@ -282,7 +282,7 @@ export default function Dashboard() {
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 mix-blend-overlay" />
                     <div>
                       <h3 className="text-sm font-bold text-slate-200 uppercase tracking-widest mb-1">Prescriptive Intelligence</h3>
-                      <p className="text-xs text-slate-500">Double Machine Learning (CATE)</p>
+
                     </div>
                     
                     {results.prescriptive.data_ambiguity ? (
