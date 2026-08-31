@@ -72,4 +72,3 @@ npm run dev -- --webpack
 Navigate to `http://localhost:3000` to view the KPI Engine.
 
 ---
-*Built for the Open Source Data Science Portfolio.*
