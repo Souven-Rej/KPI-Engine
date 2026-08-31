@@ -355,7 +355,9 @@ export default function Dashboard() {
                               });
                               if (res.ok) {
                                 const data = await res.json();
-                                if (el) el.innerText = '+$' + Math.max(0, data.lift).toLocaleString(undefined, {maximumFractionDigits:0});
+                                const val = data.lift;
+                                  const prefix = val >= 0 ? '+$' : '-$';
+                                  if (el) el.innerText = prefix + Math.abs(val).toLocaleString(undefined, {maximumFractionDigits:0});
                               }
                             } catch (e) {
                               // error
