@@ -58,9 +58,9 @@ KPI Engine is designed for cross-functional enterprise adoption through dynamic,
 * Developed the dynamic Persona system to alter narrative depth for Executives (VP) vs. Operational (Regional Managers).
 * Programmed the "Abstention Protocol" to hard-stop the LLM during data ambiguity.
 
-### Phase 4: Interactive Dashboard & Telemetry
-* Designed a professional Streamlit dashboard featuring glass-morphism UI, trace panels, and Plotly visualizations.
-* Built the continuous Human-in-the-Loop Analyst Feedback mechanism.
+### Phase 4: Enterprise Web UI & Architecture
+* Decoupled the architecture by wrapping the Python ML engine in a highly concurrent `FastAPI` REST backend.
+* Designed a professional `Next.js` and React frontend featuring Tailwind CSS glass-morphism, skeleton loaders, and `Recharts` visualizations.
 * Integrated deep runtime telemetry to track model latency, token usage, and API costs for enterprise auditability.
 
 ## 6. Key Risks & Mitigations

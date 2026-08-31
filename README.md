@@ -26,22 +26,22 @@ Generates 10,000+ rows of perfectly reproducible (`seed=42`) multi-grain synthet
 * **Prescriptive CATE (`econml_cate.py`)**: Employs Double Machine Learning (`LinearDML`) to calculate the Conditional Average Treatment Effect. It translates the anomaly into a dollar-value "Expected Revenue Lift" if the root cause is resolved.
 * **LLM Synthesis (`llm_synthesis.py`)**: Translates the mathematical payload into natural language via Google Gemini (`gemini-3.6-flash`). Uses Native Structured Outputs to guarantee a JSON payload tailored to specific personas (e.g., VP of Sales vs. Regional Manager).
 
-### Phase 4: Interactive Decision Canvas (`streamlit`)
-A Streamlit dashboard built for rapid scenario injection, allowing judges to test the pipeline interactively without re-running heavy ML models. Features real-time API telemetry, traceability panels, and dynamic state switching.
+### Phase 4: Modern Enterprise UI (`next.js` & `fastapi`)
+A heavily polished, Vercel-ready Next.js application built with React, Tailwind CSS, and Recharts. The frontend consumes a decoupled FastAPI Python backend, demonstrating how heavy Causal ML workloads can be abstracted away from modern, responsive web experiences. Features interactive AreaCharts, skeleton loaders, and a premium dark-mode aesthetic.
 
 ---
 
-## 🚀 Key Differentiators for Judges
+## 🛡️ Key Differentiators for Judges
 
 1. **The "Anti-AI" Abstention Protocol**: Standard LLMs guess when data is missing. KPI Engine implements a strict sparse-history rule. If a region has < 30 days of data, the DML engine returns `data_ambiguity = True`. The LLM intercepts this flag and is forced via system prompt to output "Investigation Required," proving the system's safety in enterprise environments.
-2. **Custom Python 3.14 SCM**: To maintain modern runtime compliance while utilizing cutting-edge causal math, we reverse-engineered the `dowhy.gcm` API to build a custom, compatible `InvertibleStructuralCausalModel` from scratch using `sklearn` and `networkx`. 
+2. **Decoupled Architecture**: By wrapping the heavy Python math libraries (`dowhy`, `econml`) in a REST API (`FastAPI`) and serving the UI via `Next.js`, we solved the serverless deployment limits of standard monolithic apps (like Streamlit), making this architecture fully enterprise-ready and massively scalable.
 3. **72 Hours to 3 Seconds**: KPI Engine automates what normally takes a data science team days of SQL slicing and Jupyter Notebook analysis, delivering a traceable, actionable CATE estimate instantly.
 
 ---
 
-## 🛠️ Setup & Execution
+## 🚀 Setup & Execution
 
-### 1. Installation
+### 1. Backend Installation (Python)
 Ensure you are using Python 3.12+ (tested on Python 3.14).
 ```bash
 python -m venv venv
@@ -54,19 +54,22 @@ Create a `.env` file in the root directory and add your Google Gemini API key.
 ```env
 GEMINI_API_KEY=your-gemini-key-here
 ```
-*(The engine also supports OpenAI as a fallback: set `OPENAI_API_KEY` instead. If no API key is provided, it will gracefully fall back to a local mock LLM responder to ensure the demo continues uninterrupted.)*
+*(The API has a built-in enterprise failover. If the Gemini API hits a 503 high-demand error, the FastAPI backend will gracefully fall back to a local responder, simulating realistic latency to ensure your demo continues uninterrupted).*
 
-### 3. Run the Streamlit Dashboard
-Launch the Interactive Decision Canvas to explore the pipeline:
+### 3. Start the FastAPI Backend
+Launch the Python math engine:
 ```bash
-python -m streamlit run src/ui/streamlit_app.py
+python -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 4. Headless Integration Test
-To view the raw mathematical payloads passing between modules without the UI:
+### 4. Start the Next.js Frontend
+In a separate terminal, launch the React dashboard:
 ```bash
-python main.py
+cd frontend
+npm install
+npm run dev -- --webpack
 ```
+Navigate to `http://localhost:3000` to view the KPI Engine.
 
 ---
 *Built for the Accenture Innovation Challenge 2026.*
