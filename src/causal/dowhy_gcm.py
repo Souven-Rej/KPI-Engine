@@ -41,6 +41,7 @@ import numpy as np
 import pandas as pd
 import yaml
 from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.linear_model import Ridge
 
 # ============================================================
 # LOGGING
@@ -326,12 +327,8 @@ class AdditiveNoiseModel:
     """
 
     def __init__(self) -> None:
-        self._model = GradientBoostingRegressor(
-            n_estimators=100,
-            max_depth=3,
-            learning_rate=0.1,
-            random_state=42,
-        )
+        # Swapped from GBR to Ridge to allow linear extrapolation for counterfactual simulator out-of-distribution
+        self._model = Ridge(alpha=1.0)
         self._is_fitted = False
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> None:
