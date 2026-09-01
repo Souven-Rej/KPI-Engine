@@ -6,9 +6,10 @@ from src.causal.dowhy_gcm import build_causal_dag, align_datasets, NODE_NET_REVE
 
 logger = logging.getLogger(__name__)
 
-def run_simulation(project_root: Path, date: str, region: str, intervention_node: str, new_value: float) -> dict:
+def run_simulation(project_root: Path, date: str, region: str, interventions: dict) -> dict:
     """
     Run a counterfactual simulation using the fitted DoWhy GCM causal graph.
+    Accepts multiple interventions: e.g. {"ad_spend": 3000, "web_traffic": 5000}
     Returns the expected counterfactual value of Net Revenue.
     """
     contract = load_contract(project_root / "config" / "kpi_contract.yaml")
@@ -25,23 +26,22 @@ def run_simulation(project_root: Path, date: str, region: str, intervention_node
         
     factual_row = match.copy()
     
-    # 2. Fit the causal model on recent history (e.g. 60 days) to capture the current structural equation
-    recent_history = df_causal[df_causal["date"] <= event_date].tail(300) # grab enough rows across 5 regions to fit
+    # 2. Fit the causal model on recent history
+    recent_history = df_causal[df_causal["date"] <= event_date].tail(300)
     
     dag = build_causal_dag(contract)
     model = InvertibleStructuralCausalModel(dag)
     model.fit(recent_history[ALL_NODES])
     
-    # 3. Simulate Counterfactual reality
-    # Compute noises of factual reality to freeze the non-intervened mechanisms
+    # 3. Simulate Counterfactual reality with multiple interventions
     noises = model._compute_all_noises(factual_row)
     
     simulated_values = {}
     n_samples = len(factual_row)
     
     for node in model._node_order:
-        if node == intervention_node:
-            val = np.full(n_samples, new_value)
+        if node in interventions:
+            val = np.full(n_samples, interventions[node])
             simulated_values[node] = val
             continue
             
@@ -59,10 +59,17 @@ def run_simulation(project_root: Path, date: str, region: str, intervention_node
     cf_revenue = float(simulated_values[NODE_NET_REVENUE][0])
     factual_revenue = float(factual_row[NODE_NET_REVENUE].values[0])
     
+    # Return factual values for each driver too
+    factual_drivers = {}
+    for node in ALL_NODES:
+        if node != NODE_NET_REVENUE:
+            factual_drivers[node] = float(factual_row[node].values[0])
+    
     return {
         "factual_revenue": factual_revenue,
         "simulated_revenue": cf_revenue,
         "lift": cf_revenue - factual_revenue,
-        "intervened_node": intervention_node,
-        "new_value": new_value
+        "interventions": interventions,
+        "factual_drivers": factual_drivers
     }
+

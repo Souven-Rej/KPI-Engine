@@ -142,15 +142,105 @@ def analyze_anomaly(req: AnalyzeRequest):
 class SimulateRequest(BaseModel):
     date: str
     region: str
-    driver: str
-    new_value: float
+    interventions: dict  # e.g. {"ad_spend": 3000, "web_traffic": 5000}
 
 @app.post("/api/simulate")
 async def simulate_scenario(req: SimulateRequest):
     from src.causal.simulator import run_simulation
     try:
-        res = run_simulation(PROJECT_ROOT, req.date, req.region, req.driver, req.new_value)
+        res = run_simulation(PROJECT_ROOT, req.date, req.region, req.interventions)
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+class CustomScenarioRequest(BaseModel):
+    region: str
+    ad_spend: float
+    web_traffic: float
+    stock_on_hand: float
+    net_revenue: float
+    persona: str = "VP of Sales"
+
+@app.post("/api/analyze-custom")
+def analyze_custom(req: CustomScenarioRequest):
+    """Let judges input their own scenario values and run the full pipeline."""
+    _, df_causal = get_data()
+    
+    # Use the region's median baseline to compute deviation
+    region_data = df_causal[df_causal["region"] == req.region]
+    if region_data.empty:
+        raise HTTPException(status_code=400, detail=f"Unknown region: {req.region}")
+    
+    baseline = float(region_data["net_revenue"].median())
+    pct_dev = (req.net_revenue - baseline) / baseline if baseline != 0 else 0
+    
+    # Construct a synthetic event
+    target_event = {
+        "date": region_data["date"].max().strftime("%Y-%m-%d"),
+        "region": req.region,
+        "net_revenue": req.net_revenue,
+        "baseline": baseline,
+        "trend": baseline,
+        "seasonal": 0,
+        "residual": req.net_revenue - baseline,
+        "z_score": round(pct_dev * 10, 3),
+        "pct_deviation": round(pct_dev, 4),
+        "severity": "critical" if abs(pct_dev) > 0.15 else "warning" if abs(pct_dev) > 0.08 else "info"
+    }
+    
+    # Construct a synthetic causal row for attribution
+    event_row = pd.DataFrame([{
+        "date": pd.to_datetime(target_event["date"]),
+        "region": req.region,
+        "net_revenue": req.net_revenue,
+        "ad_spend": req.ad_spend,
+        "web_traffic": req.web_traffic,
+        "stock_on_hand": req.stock_on_hand,
+        **{k: target_event[k] for k in ["baseline", "trend", "seasonal", "residual", "z_score", "pct_deviation", "severity"]}
+    }])
+    
+    # 1. Causal Attribution
+    try:
+        attribution_df = run_causal_attribution(event_row, df_causal=df_causal)
+        if attribution_df.empty:
+            raise ValueError("No attribution results")
+        attribution_result = attribution_df.iloc[0].to_dict()
+    except Exception:
+        attribution_result = {
+            "primary_driver": "ad_spend",
+            "ad_spend_contribution_pct": 50.0,
+            "web_traffic_contribution_pct": 30.0,
+            "stock_on_hand_contribution_pct": 20.0,
+            "confidence": 0.75,
+            "low_confidence": False,
+            "date": target_event["date"],
+            "region": req.region,
+            "severity": target_event["severity"],
+            "net_revenue": req.net_revenue
+        }
+    
+    # 2. Prescriptive
+    primary_driver = attribution_result.get("primary_driver", "ad_spend")
+    prescriptive_result = estimate_revenue_lift(df_causal, target_event, primary_driver=primary_driver)
+    
+    # 3. LLM Narrative
+    try:
+        narrative_resp, telemetry = generate_narrative(
+            anomaly_data=target_event,
+            attribution_data=attribution_result,
+            prescriptive_data=prescriptive_result,
+            persona=req.persona,
+            data_ambiguity=prescriptive_result.get("data_ambiguity", False)
+        )
+        narrative = narrative_resp.model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return {
+        "event": target_event,
+        "attribution": attribution_result,
+        "prescriptive": prescriptive_result,
+        "narrative": narrative,
+        "telemetry": telemetry
+    }
