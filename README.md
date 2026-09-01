@@ -25,9 +25,11 @@ Generates 10,000+ rows of perfectly reproducible (`seed=42`) multi-grain synthet
 ### Phase 3: Prescriptive Analytics & Synthesis (`econml` & `google-genai`)
 * **Prescriptive CATE (`econml_cate.py`)**: Employs Double Machine Learning (`LinearDML`) to calculate the Conditional Average Treatment Effect. It translates the anomaly into a dollar-value "Expected Revenue Lift" if the root cause is resolved.
 * **LLM Synthesis (`llm_synthesis.py`)**: Translates the mathematical payload into natural language via Google Gemini (`gemini-3.6-flash`). Uses Native Structured Outputs to guarantee a JSON payload tailored to specific personas (e.g., VP of Sales vs. Regional Manager).
+* **Interactive What-If Simulator (`simulator.py`)**: Uses the fitted Invertible Structural Causal Model to allow real-time, multi-node counterfactual simulations. Users can adjust multiple drivers (e.g., Ad Spend and Traffic) simultaneously and watch the causal graph propagate the math to predict the new net revenue.
 
 ### Phase 4: Modern Enterprise UI (`next.js` & `fastapi`)
-A heavily polished, Vercel-ready Next.js application built with React, Tailwind CSS, and Recharts. The frontend consumes a decoupled FastAPI Python backend, demonstrating how heavy Causal ML workloads can be abstracted away from modern, responsive web experiences. Features interactive AreaCharts, skeleton loaders, and a premium dark-mode aesthetic.
+A heavily polished, Vercel-ready Next.js application built with React, Tailwind CSS, and Recharts. The frontend consumes a decoupled FastAPI Python backend, demonstrating how heavy Causal ML workloads can be abstracted away from modern web experiences. 
+* **Custom Data Tester**: Allows users to input their own mock data into the UI on the fly, instantly generating a synthetic causal history and running the full pipeline (STL -> DoWhy -> EconML -> Gemini) to prove the engine generalizes beyond pre-packaged scenarios.
 
 ---
 

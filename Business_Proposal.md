@@ -26,7 +26,7 @@ KPI Engine is designed for cross-functional enterprise adoption through dynamic,
 
 *   **Executive Leadership (e.g., VP of Sales):**
     *   **Needs:** High-level strategic visibility, total revenue impact, and macro-level lever adjustments.
-    *   **Experience:** Receives concise executive summaries focused on financial lift and strategic directives.
+    *   **Experience:** Receives concise executive summaries focused on financial lift and strategic directives. Can use the Multi-Node Simulator to play out "What-If" operational budget scenarios.
 *   **Operational Leaders (e.g., Regional Managers):**
     *   **Needs:** Tactical, ground-level instructions to resolve supply chain or marketing bottlenecks.
     *   **Experience:** Receives detailed operational breakdowns, localized CATE estimates, and immediate action items.
@@ -58,9 +58,11 @@ KPI Engine is designed for cross-functional enterprise adoption through dynamic,
 * Developed the dynamic Persona system to alter narrative depth for Executives (VP) vs. Operational (Regional Managers).
 * Programmed the "Abstention Protocol" to hard-stop the LLM during data ambiguity.
 
-### Phase 4: Enterprise Web UI & Architecture
+### Phase 4: Enterprise Web UI & Interactivity
 * Decoupled the architecture by wrapping the Python ML engine in a highly concurrent `FastAPI` REST backend.
 * Designed a professional `Next.js` and React frontend featuring Tailwind CSS glass-morphism, skeleton loaders, and `Recharts` visualizations.
+* **Interactive What-If Simulator**: Implemented a multi-node, real-time causal simulator. Users can adjust multiple operational levers (Ad Spend, Traffic, Stock) simultaneously to instantly calculate counterfactual revenue based on the underlying graph structure.
+* **Custom Data Engine**: Added an on-the-fly "Test Custom Data" pipeline where users can input un-seen mock data. The backend instantly constructs a synthetic history, calculates baselines, and pushes it through the entire mathematical and LLM pipeline to prove generalizability.
 * Integrated deep runtime telemetry to track model latency, token usage, and API costs for enterprise auditability.
 
 ## 6. Key Risks & Mitigations
