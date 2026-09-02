@@ -29,3 +29,5 @@ plotly>=5.20,<6
 
 # Dev & Testing
 pytest>=8.2,<9
+fastapi
+uvicorn
