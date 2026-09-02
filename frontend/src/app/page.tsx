@@ -49,11 +49,21 @@ export default function Dashboard() {
         fetch(`${API_BASE}/api/analyze-custom`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...customData, persona })
+          body: JSON.stringify({ 
+            ...customData, 
+            net_revenue: Number(customData.net_revenue) || 0,
+            ad_spend: Number(customData.ad_spend) || 0,
+            web_traffic: Number(customData.web_traffic) || 0,
+            stock_on_hand: Number(customData.stock_on_hand) || 0,
+            persona 
+          })
         })
       ]);
       const analData = await analRes.json();
       const histData = await histRes.json();
+      if (analData.detail) {
+        throw new Error(analData.detail);
+      }
       setResults(analData);
       setHistory(histData.history);
     } catch (err) {
@@ -83,10 +93,12 @@ export default function Dashboard() {
         })
       ]);
 
-      if (!analRes.ok) throw new Error("API failed to respond.");
-      
       const analData = await analRes.json();
       const histData = await histRes.json();
+      
+      if (analData.detail) {
+        throw new Error(analData.detail);
+      }
       
       setResults(analData);
       setHistory(histData.history);
@@ -259,27 +271,26 @@ export default function Dashboard() {
                       value={customData.region}
                       onChange={(e) => setCustomData({...customData, region: e.target.value})}
                     >
-                      <option>West</option><option>East</option><option>South</option><option>North</option><option>Central</option>
-                      <option>Southeast</option><option>Southwest</option><option>Northeast</option><option>Midwest</option>
+                      <option>West</option><option>Northeast</option><option>Southeast</option><option>Midwest</option><option>Southwest</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1">Net Revenue ($)</label>
-                    <input type="number" className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500" value={customData.net_revenue} onChange={(e) => setCustomData({...customData, net_revenue: parseFloat(e.target.value) || 0})} />
+                    <input type="number" className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500" value={customData.net_revenue} onChange={(e) => setCustomData({...customData, net_revenue: e.target.value === '' ? '' : parseFloat(e.target.value)})} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1">Ad Spend</label>
-                      <input type="number" className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500" value={customData.ad_spend} onChange={(e) => setCustomData({...customData, ad_spend: parseFloat(e.target.value) || 0})} />
+                      <input type="number" className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500" value={customData.ad_spend} onChange={(e) => setCustomData({...customData, ad_spend: e.target.value === '' ? '' : parseFloat(e.target.value)})} />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1">Traffic</label>
-                      <input type="number" className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500" value={customData.web_traffic} onChange={(e) => setCustomData({...customData, web_traffic: parseFloat(e.target.value) || 0})} />
+                      <input type="number" className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500" value={customData.web_traffic} onChange={(e) => setCustomData({...customData, web_traffic: e.target.value === '' ? '' : parseFloat(e.target.value)})} />
                     </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1">Stock On Hand</label>
-                    <input type="number" className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500" value={customData.stock_on_hand} onChange={(e) => setCustomData({...customData, stock_on_hand: parseFloat(e.target.value) || 0})} />
+                    <input type="number" className="w-full bg-[#0f172a] border border-[#1e293b] rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500" value={customData.stock_on_hand} onChange={(e) => setCustomData({...customData, stock_on_hand: e.target.value === '' ? '' : parseFloat(e.target.value)})} />
                   </div>
                   
                   <button 
@@ -308,13 +319,24 @@ export default function Dashboard() {
           <div className="max-w-6xl mx-auto">
             
             {/* Empty State */}
-            {!results && !loading && (
+            {!results && !loading && !error && (
               <div className="h-[70vh] flex flex-col items-center justify-center text-slate-500">
                 <div className="w-24 h-24 bg-[#0f172a] rounded-full flex items-center justify-center mb-6 border border-[#1e293b] shadow-2xl">
                   <BarChart3 size={40} className="text-slate-600" />
                 </div>
                 <h2 className="text-2xl font-semibold text-slate-300">Ready for Analysis</h2>
                 <p className="text-sm mt-3 max-w-md text-center leading-relaxed">Select a detected anomaly from the command center to initiate counterfactual decomposition and CATE estimation.</p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+              <div className="h-[70vh] flex flex-col items-center justify-center text-red-500">
+                <div className="w-24 h-24 bg-red-950/30 rounded-full flex items-center justify-center mb-6 border border-red-900/50 shadow-2xl">
+                  <AlertTriangle size={40} className="text-red-500" />
+                </div>
+                <h2 className="text-2xl font-semibold text-red-400">Analysis Failed</h2>
+                <p className="text-sm mt-3 max-w-md text-center text-red-300/80 leading-relaxed">{error}</p>
               </div>
             )}
 

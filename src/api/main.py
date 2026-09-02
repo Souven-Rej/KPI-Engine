@@ -40,6 +40,13 @@ def get_data():
         
         events, kpi = run_detection()
         df_causal = align_datasets()
+        
+        # Merge baseline from the STL detection into the causal dataset for frontend history charting
+        if not kpi.empty and not df_causal.empty:
+            kpi['date'] = pd.to_datetime(kpi['date'])
+            df_causal['date'] = pd.to_datetime(df_causal['date'])
+            df_causal = pd.merge(df_causal, kpi[['date', 'region', 'baseline']], on=['date', 'region'], how='left')
+
         _cache["anomaly_events"] = events
         _cache["df_causal"] = df_causal
     return _cache["anomaly_events"], _cache["df_causal"]
