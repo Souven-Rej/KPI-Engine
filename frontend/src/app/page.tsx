@@ -27,11 +27,18 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetch(`${API_BASE}/api/scenarios`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
-        setScenarios(data.scenarios);
-        if (data.scenarios.length > 0) {
-          setSelectedScenario(data.scenarios[0].id);
+        if (data && data.scenarios) {
+          setScenarios(data.scenarios);
+          if (data.scenarios.length > 0) {
+            setSelectedScenario(data.scenarios[0].id);
+          }
+        } else {
+          console.error("API did not return scenarios array:", data);
         }
       })
       .catch((err: any) => console.error("Failed to load scenarios:", err));
@@ -150,7 +157,7 @@ export default function Dashboard() {
         </div>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={history} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+            <AreaChart data={history || []} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
               <defs>
                 <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
@@ -360,15 +367,15 @@ export default function Dashboard() {
                 <div className="flex justify-between items-end">
                   <div>
                     <div className="flex items-center gap-3 mb-2">
-                      <span className="bg-slate-800 text-slate-300 text-xs px-2.5 py-1 rounded-md font-medium tracking-wide">REGION: {results.event.region.toUpperCase()}</span>
-                      <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-xs px-2.5 py-1 rounded-md font-medium tracking-wide">STATUS: {results.event.severity.toUpperCase()}</span>
+                      <span className="bg-slate-800 text-slate-300 text-xs px-2.5 py-1 rounded-md font-medium tracking-wide">REGION: {results?.event?.region.toUpperCase()}</span>
+                      <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-xs px-2.5 py-1 rounded-md font-medium tracking-wide">STATUS: {results?.event?.severity.toUpperCase()}</span>
                     </div>
-                    <h2 className="text-3xl font-bold tracking-tight text-white">{results.event.date} Anomaly Profile</h2>
+                    <h2 className="text-3xl font-bold tracking-tight text-white">{results?.event?.date} Anomaly Profile</h2>
                   </div>
                   <div className="text-right bg-[#0f172a] border border-[#1e293b] px-6 py-3 rounded-2xl shadow-lg">
                     <div className="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-1">KPI Deviation</div>
                     <div className="text-2xl font-black text-red-500">
-                      {results.event.pct_deviation ? (results.event.pct_deviation * 100).toFixed(1) : 0}%
+                      {results?.event?.pct_deviation ? (results?.event?.pct_deviation * 100).toFixed(1) : 0}%
                     </div>
                   </div>
                 </div>
@@ -392,7 +399,7 @@ export default function Dashboard() {
                     <div className="mt-4 pt-4 border-t border-[#1e293b] text-center">
                       <div className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mb-1">Primary Driver Identified</div>
                       <div className="text-lg font-bold text-violet-400 capitalize bg-violet-500/10 py-1.5 rounded-lg border border-violet-500/20">
-                        {results.attribution.primary_driver?.replace(/_/g, ' ')}
+                        {results?.attribution?.primary_driver?.replace(/_/g, ' ')}
                       </div>
                     </div>
                   </div>
@@ -405,7 +412,7 @@ export default function Dashboard() {
 
                     </div>
                     
-                    {results.prescriptive.data_ambiguity ? (
+                    {results?.prescriptive?.data_ambiguity ? (
                        <div className="flex-1 flex flex-col items-center justify-center text-center mt-6 bg-red-950/20 rounded-xl border border-red-900/50 p-8">
                          <AlertTriangle className="text-red-500 mb-3" size={40} />
                          <h4 className="font-bold text-lg text-red-400 tracking-wide">Data Ambiguity Triggered</h4>
@@ -415,20 +422,20 @@ export default function Dashboard() {
                       <div className="flex-1 flex flex-col justify-center items-center mt-4">
                         <div className="text-xs text-emerald-500 uppercase tracking-widest font-bold mb-2">Expected Revenue Recovery</div>
                         <div className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-emerald-400 to-emerald-600 drop-shadow-sm">
-                          ${(results.prescriptive.expected_lift || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}
+                          ${(results?.prescriptive?.expected_lift || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}
                         </div>
                         <div className="text-sm text-slate-400 mt-3 font-medium bg-[#1e293b] px-4 py-1.5 rounded-full border border-slate-700">
-                          If {results.attribution.primary_driver?.replace(/_/g, ' ')} is restored
+                          If {results?.attribution?.primary_driver?.replace(/_/g, ' ')} is restored
                         </div>
                         
                         <div className="w-full flex justify-center gap-12 mt-10">
                           <div className="text-center bg-[#0b0f19] px-8 py-4 rounded-2xl border border-[#1e293b] shadow-inner">
                             <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Current State</div>
-                            <div className="text-xl font-bold text-red-400">${(results.prescriptive.current_spend || 0).toLocaleString(undefined, {maximumFractionDigits:0})}</div>
+                            <div className="text-xl font-bold text-red-400">${(results?.prescriptive?.current_spend || 0).toLocaleString(undefined, {maximumFractionDigits:0})}</div>
                           </div>
                           <div className="text-center bg-[#0b0f19] px-8 py-4 rounded-2xl border border-[#1e293b] shadow-inner">
                             <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Target Baseline</div>
-                            <div className="text-xl font-bold text-emerald-400">${(results.prescriptive.baseline_spend || 0).toLocaleString(undefined, {maximumFractionDigits:0})}</div>
+                            <div className="text-xl font-bold text-emerald-400">${(results?.prescriptive?.baseline_spend || 0).toLocaleString(undefined, {maximumFractionDigits:0})}</div>
                           </div>
                         </div>
                       </div>
@@ -446,7 +453,7 @@ export default function Dashboard() {
                     
                     <div className="flex flex-col gap-6">
                       {['ad_spend', 'web_traffic', 'stock_on_hand'].map((driver: any) => {
-                        const isPrimary = results.attribution.primary_driver === driver;
+                        const isPrimary = results?.attribution?.primary_driver === driver;
                         return (
                           <div key={driver}>
                             <div className="flex justify-between text-sm mb-3">
@@ -454,7 +461,7 @@ export default function Dashboard() {
                               <span id={`sim-slider-val-${driver}`} className="text-fuchsia-400 font-bold bg-fuchsia-500/10 px-3 py-1 rounded font-mono">
                                 {driver === 'web_traffic' || driver === 'stock_on_hand' ? 
                                   results.event[driver] || 0 : 
-                                  `$${results.prescriptive.baseline_spend?.toLocaleString(undefined, {maximumFractionDigits:0}) || '1,500'}`
+                                  `$${results?.prescriptive?.baseline_spend?.toLocaleString(undefined, {maximumFractionDigits:0}) || '1,500'}`
                                 }
                               </span>
                             </div>
@@ -463,7 +470,7 @@ export default function Dashboard() {
                               min="0" 
                               max={driver === 'stock_on_hand' ? "1000" : "5000"} 
                               step={driver === 'stock_on_hand' ? "10" : "50"}
-                              defaultValue={driver === 'ad_spend' ? (results.prescriptive.baseline_spend || 1500) : (results.event[driver] || 0)}
+                              defaultValue={driver === 'ad_spend' ? (results?.prescriptive?.baseline_spend || 1500) : (results.event[driver] || 0)}
                               id={`sim-slider-${driver}`}
                               className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-500"
                               onChange={(e) => {
@@ -488,8 +495,8 @@ export default function Dashboard() {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({
-                                        date: results.event.date,
-                                        region: results.event.region,
+                                        date: results?.event?.date,
+                                        region: results?.event?.region,
                                         interventions: interventions
                                       })
                                     });
@@ -519,11 +526,11 @@ export default function Dashboard() {
                       <div className="grid grid-cols-3 gap-3 mt-4 border-t border-slate-700/50 pt-6">
                         <div className="bg-[#0f172a] rounded-xl p-4 border border-slate-800 text-center">
                           <div className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mb-1">Factual Revenue</div>
-                          <div id="sim-factual" className="text-lg font-bold text-slate-300">${results.event.net_revenue?.toLocaleString(undefined, {maximumFractionDigits:0})}</div>
+                          <div id="sim-factual" className="text-lg font-bold text-slate-300">${results?.event?.net_revenue?.toLocaleString(undefined, {maximumFractionDigits:0})}</div>
                         </div>
                         <div className="bg-[#0f172a] rounded-xl p-4 border border-slate-800 text-center">
                           <div className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mb-1">Simulated Revenue</div>
-                          <div id="sim-cf" className="text-lg font-bold text-blue-400">${results.event.net_revenue?.toLocaleString(undefined, {maximumFractionDigits:0})}</div>
+                          <div id="sim-cf" className="text-lg font-bold text-blue-400">${results?.event?.net_revenue?.toLocaleString(undefined, {maximumFractionDigits:0})}</div>
                         </div>
                         <div className="bg-[#0f172a] rounded-xl p-4 border border-fuchsia-500/30 text-center">
                           <div className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mb-1">Projected Lift</div>
@@ -559,7 +566,7 @@ export default function Dashboard() {
                    </div>
                    
                    <p className="text-slate-200 text-lg leading-relaxed font-light mb-8 max-w-4xl">
-                     {results.narrative.narrative_summary}
+                     {results?.narrative?.narrative_summary}
                    </p>
 
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -568,7 +575,7 @@ export default function Dashboard() {
                          <BarChart3 size={14} /> Mathematical Drivers
                        </h4>
                        <ul className="space-y-3">
-                         {results.narrative.key_drivers.map((driver: any, idx: any) => (
+                         {results?.narrative?.key_drivers.map((driver: any, idx: any) => (
                            <li key={idx} className="flex items-start gap-3 text-sm text-slate-300">
                              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0 shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
                              <span className="leading-relaxed">{driver}</span>
@@ -581,7 +588,7 @@ export default function Dashboard() {
                          <Activity size={14} /> Recommended Action Plan
                        </h4>
                        <ul className="space-y-3">
-                         {results.narrative.recommended_actions.map((action: any, idx: any) => (
+                         {results?.narrative?.recommended_actions.map((action: any, idx: any) => (
                            <li key={idx} className="flex items-start gap-3 text-sm text-slate-300">
                              <CheckCircle2 className="mt-0.5 text-emerald-500 shrink-0" size={16} />
                              <span className="leading-relaxed">{action}</span>
@@ -602,10 +609,10 @@ export default function Dashboard() {
                        </span>
                        System Nominal
                      </span>
-                     <span>End-to-End Latency: <span className="text-slate-400">{results.telemetry.latency_seconds?.toFixed(2)}s</span></span>
+                     <span>End-to-End Latency: <span className="text-slate-400">{results?.telemetry?.latency_seconds?.toFixed(2)}s</span></span>
                    </div>
                    <div>
-                     Tokens: <span className="text-slate-400">{results.telemetry.prompt_tokens} In</span> / <span className="text-slate-400">{results.telemetry.completion_tokens} Out</span>
+                     Tokens: <span className="text-slate-400">{results?.telemetry?.prompt_tokens} In</span> / <span className="text-slate-400">{results?.telemetry?.completion_tokens} Out</span>
                    </div>
                 </div>
 
