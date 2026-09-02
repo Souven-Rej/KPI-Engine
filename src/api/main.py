@@ -32,23 +32,27 @@ _cache = {}
 
 def get_data():
     if "anomaly_events" not in _cache:
-        # Check if raw data exists
-        data_path = Path("data/raw/sales_daily.csv")
-        if not data_path.exists():
-            from src.data_generation.enterprise_warehouse_etl import generate_all
-            generate_all()
-        
-        events, kpi = run_detection()
-        df_causal = align_datasets()
-        
-        # Merge baseline from the STL detection into the causal dataset for frontend history charting
-        if not kpi.empty and not df_causal.empty:
-            kpi['date'] = pd.to_datetime(kpi['date'])
-            df_causal['date'] = pd.to_datetime(df_causal['date'])
-            df_causal = pd.merge(df_causal, kpi[['date', 'region', 'baseline']], on=['date', 'region'], how='left')
+        try:
+            # Check if raw data exists
+            data_path = Path("data/raw/sales_daily.csv")
+            if not data_path.exists():
+                from src.data_generation.enterprise_warehouse_etl import generate_all
+                generate_all()
+            
+            events, kpi = run_detection()
+            df_causal = align_datasets()
+            
+            # Merge baseline from the STL detection into the causal dataset for frontend history charting
+            if not kpi.empty and not df_causal.empty:
+                kpi['date'] = pd.to_datetime(kpi['date'])
+                df_causal['date'] = pd.to_datetime(df_causal['date'])
+                df_causal = pd.merge(df_causal, kpi[['date', 'region', 'baseline']], on=['date', 'region'], how='left')
 
-        _cache["anomaly_events"] = events
-        _cache["df_causal"] = df_causal
+            _cache["anomaly_events"] = events
+            _cache["df_causal"] = df_causal
+        except Exception as e:
+            import traceback
+            raise HTTPException(status_code=500, detail=traceback.format_exc())
     return _cache["anomaly_events"], _cache["df_causal"]
 
 class AnalyzeRequest(BaseModel):
