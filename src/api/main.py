@@ -16,7 +16,15 @@ from src.causal.dowhy_gcm import run_causal_attribution, align_datasets
 from src.prescriptive.econml_cate import estimate_revenue_lift
 from src.narrative.llm_synthesis import generate_narrative
 
+from fastapi.responses import JSONResponse
+from fastapi import Request
+import traceback
+
 app = FastAPI(title="KPI Engine API", version="1.0")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(status_code=500, content={'detail': traceback.format_exc()})
 
 # Enable CORS for the Next.js frontend
 app.add_middleware(
