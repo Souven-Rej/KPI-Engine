@@ -1,5 +1,5 @@
 # ⚡ KPI Engine: Detailed Business Proposal
-**Open Source Data Science Portfolio — BusinessIntelligence.ai Track**
+**Accenture Innovation Challenge 2026 — BusinessIntelligence.ai Track**
 
 ---
 
@@ -75,4 +75,4 @@ KPI Engine is designed for cross-functional enterprise adoption through dynamic,
 | **User Adoption / Trust** | Medium | **Analyst Feedback Loop:** Users can flag incorrect attributions in the UI. We display the math explicitly on screen (Counterfactual Decomposition traces) so the system acts as a "glass box" rather than a black box. |
 
 ---
-*Prepared for the Open Source Data Science Portfolio. Codebase and prototype available in the project repository.*
+*Prepared for the Accenture Innovation Challenge 2026. Codebase and prototype available in the project repository.*

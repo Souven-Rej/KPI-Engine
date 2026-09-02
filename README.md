@@ -1,5 +1,5 @@
 # ⚡ KPI Engine: Storytelling-to-Action Pipeline
-**Open Source Data Science Portfolio — BusinessIntelligence.ai Track**
+**Accenture Innovation Challenge 2026 — BusinessIntelligence.ai Track**
 
 KPI Engine is an autonomous, deterministic-first analytics prototype that bridges the gap between raw data and executive action. It detects KPI movements, reconciles multi-grain data, identifies causal drivers, calculates expected financial lift, and generates role-specific narratives.
 
