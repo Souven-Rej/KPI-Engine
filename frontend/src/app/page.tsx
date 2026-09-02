@@ -7,16 +7,16 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const COLORS = ["#8b5cf6", "#10b981", "#3b82f6"]; // Modern SaaS colors (Violet, Emerald, Blue)
 
 export default function Dashboard() {
-  const [scenarios, setScenarios] = useState([]);
+  const [scenarios, setScenarios] = useState<any[]>([]);
   const [selectedScenario, setSelectedScenario] = useState("");
   const [persona, setPersona] = useState("VP of Sales");
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState(null);
-  const [history, setHistory] = useState(null);
-  const [error, setError] = useState(null);
+  const [results, setResults] = useState<any>(null);
+  const [history, setHistory] = useState<any>(null);
+  const [error, setError] = useState<any>(null);
 
   const [customMode, setCustomMode] = useState(false);
-  const [customData, setCustomData] = useState({
+  const [customData, setCustomData] = useState<any>({
     region: "West",
     ad_spend: 1500,
     web_traffic: 5000,
@@ -34,7 +34,7 @@ export default function Dashboard() {
           setSelectedScenario(data.scenarios[0].id);
         }
       })
-      .catch((err) => console.error("Failed to load scenarios:", err));
+      .catch((err: any) => console.error("Failed to load scenarios:", err));
   }, []);
 
   
@@ -66,7 +66,7 @@ export default function Dashboard() {
       }
       setResults(analData);
       setHistory(histData.history);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message);
     }
     setLoading(false);
@@ -102,7 +102,7 @@ export default function Dashboard() {
       
       setResults(analData);
       setHistory(histData.history);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message);
     }
     setLoading(false);
@@ -127,7 +127,7 @@ export default function Dashboard() {
               ))}
             </Pie>
             <PieTooltip 
-              formatter={(value) => `${value.toFixed(1)}%`}
+              formatter={(value: any) => `${value.toFixed(1)}%`}
               contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
             />
           </PieChart>
@@ -163,7 +163,7 @@ export default function Dashboard() {
               <LineTooltip 
                 contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
                 labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontWeight: 600 }}
-                formatter={(value) => `$${Number(value).toLocaleString()}`}
+                formatter={(value: any) => `$${Number(value).toLocaleString()}`}
               />
               <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} iconType="circle" />
               <Area type="monotone" dataKey="actual" name="Actual Revenue" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorActual)" activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }} />
@@ -445,7 +445,7 @@ export default function Dashboard() {
                     </div>
                     
                     <div className="flex flex-col gap-6">
-                      {['ad_spend', 'web_traffic', 'stock_on_hand'].map(driver => {
+                      {['ad_spend', 'web_traffic', 'stock_on_hand'].map((driver: any) => {
                         const isPrimary = results.attribution.primary_driver === driver;
                         return (
                           <div key={driver}>
@@ -506,7 +506,7 @@ export default function Dashboard() {
                                       const cfEl = document.getElementById('sim-cf');
                                       if (cfEl) cfEl.innerText = '$' + clampedSimulated.toLocaleString(undefined, {maximumFractionDigits:0});
                                     }
-                                  } catch (e) {
+                                  } catch (e: any) {
                                     // error
                                   }
                                 }, 300);
@@ -568,7 +568,7 @@ export default function Dashboard() {
                          <BarChart3 size={14} /> Mathematical Drivers
                        </h4>
                        <ul className="space-y-3">
-                         {results.narrative.key_drivers.map((driver, idx) => (
+                         {results.narrative.key_drivers.map((driver: any, idx: any) => (
                            <li key={idx} className="flex items-start gap-3 text-sm text-slate-300">
                              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0 shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
                              <span className="leading-relaxed">{driver}</span>
@@ -581,7 +581,7 @@ export default function Dashboard() {
                          <Activity size={14} /> Recommended Action Plan
                        </h4>
                        <ul className="space-y-3">
-                         {results.narrative.recommended_actions.map((action, idx) => (
+                         {results.narrative.recommended_actions.map((action: any, idx: any) => (
                            <li key={idx} className="flex items-start gap-3 text-sm text-slate-300">
                              <CheckCircle2 className="mt-0.5 text-emerald-500 shrink-0" size={16} />
                              <span className="leading-relaxed">{action}</span>
