@@ -119,7 +119,7 @@ def load_sales_data(
     if not csv_path.exists():
         raise FileNotFoundError(
             f"Sales data not found at {csv_path}. "
-            f"Run `python -m src.data_generation.synthetic_generator` first."
+            f"Run `python -m src.data_generation.enterprise_warehouse_etl` first."
         )
 
     df = pd.read_csv(csv_path, parse_dates=[date_col])

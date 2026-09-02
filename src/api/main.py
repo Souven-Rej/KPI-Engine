@@ -35,7 +35,7 @@ def get_data():
         # Check if raw data exists
         data_path = Path("data/raw/sales_daily.csv")
         if not data_path.exists():
-            from src.data_generation.synthetic_generator import generate_all
+            from src.data_generation.enterprise_warehouse_etl import generate_all
             generate_all()
         
         events, kpi = run_detection()

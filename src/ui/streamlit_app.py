@@ -335,7 +335,7 @@ def _load_roles_from_contract() -> dict[str, str]:
 def load_and_detect():
     data_path = PROJECT_ROOT / "data" / "raw" / "sales_daily.csv"
     if not data_path.exists():
-        from src.data_generation.synthetic_generator import generate_all
+        from src.data_generation.enterprise_warehouse_etl import generate_all
         # Just run generation directly if missing (e.g. fresh clone on Streamlit Cloud)
         generate_all()
 

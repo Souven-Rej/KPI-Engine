@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.data_generation.synthetic_generator import (
+from src.data_generation.enterprise_warehouse_etl import (
     END_DATE,
     MARKETING_SHOCK_END,
     MARKETING_SHOCK_START,
