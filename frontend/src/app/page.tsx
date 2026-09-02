@@ -3,7 +3,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Activity, AlertTriangle, BrainCircuit, BarChart3, ChevronDown, CheckCircle2, LayoutDashboard, Settings, Bell, Search, Menu, HelpCircle } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip as PieTooltip, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as LineTooltip, Legend, Line } from "recharts";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const rawApiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = rawApiBase.replace(/\/+$/, "");
 const COLORS = ["#8b5cf6", "#10b981", "#3b82f6"]; // Modern SaaS colors (Violet, Emerald, Blue)
 
 export default function Dashboard() {
@@ -184,7 +185,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-violet-500/30">
-      <div className="p-2 bg-red-900 text-white text-xs mb-4">DEBUG API_BASE: {API_BASE}</div>
       
       {/* Top Navigation */}
       <header className="h-16 border-b border-[#1e293b] bg-[#0b0f19]/80 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-50">
