@@ -183,7 +183,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 font-sans flex flex-col selection:bg-violet-500/30">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-violet-500/30">
+      <div className="p-2 bg-red-900 text-white text-xs mb-4">DEBUG API_BASE: {API_BASE}</div>
       
       {/* Top Navigation */}
       <header className="h-16 border-b border-[#1e293b] bg-[#0b0f19]/80 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-50">
